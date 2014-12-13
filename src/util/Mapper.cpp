@@ -12,6 +12,7 @@
 #include <vector>
 #include <map>
 #include "Mapper.h"
+#include "Mapping.h"
 
 #include "BioUtil.h"
 
@@ -96,18 +97,21 @@ void reconstructLIS(std::vector<int>* result, int lastPos, int* reconstructionTa
 void getKhmerPositions(bioutil::Read* read, SuffixArray* sa, std::vector<std::pair<int, int> > &positions,
 		int kmerStart) {
 	char intArray[KMER_K];
-	for(int i = 0; i < KMER_K; ++i) {
-		intArray[i] = baseToInt(read->getData(kmerStart+i));
+	for (int i = 0; i < KMER_K; ++i) {
+		intArray[i] = baseToInt(read->getData(kmerStart + i));
 	}
 	sa->findStartingPositions(intArray, KMER_K, kmerStart, positions);
 }
-int getPositionInGeneFromSuffixArray(bioutil::Read* read, SuffixArray* sa) {
+int getPositionInSequenceFromSuffixArray(bioutil::Read* read, SuffixArray* sa) {
 	std::vector<std::pair<int, int> > pos;
 	printf("iden pozicije trazit\n");
 	for (int i = 0; i < read->getDataLen() - KMER_K; ++i) {
 		getKhmerPositions(read, sa, pos, i);
 	}
 	std::sort(pos.begin(), pos.end());
+//	for (int i = 0; i < pos.size(); ++i) {
+//		printf("%d ---- %d\n", pos[i].first, pos[i].second);
+//	}
 	// sweep
 	int startIndex = 0, endIndex = 0, lastPosition = -1;
 	while (true) {
@@ -124,17 +128,15 @@ int getPositionInGeneFromSuffixArray(bioutil::Read* read, SuffixArray* sa) {
 		for (; endIndex < pos.size() && pos[endIndex].first < windowEnd; ++endIndex)
 			;
 		assert(startIndex <= endIndex);
+		printf("Prozor: %d(%d)- %d(%d)\n", startIndex, pos[startIndex], endIndex, pos[endIndex]);
 		if (LIS) {
-			printf("LISSS\n");
 			std::vector<int> lisResult;
 			calcLIS(&lisResult, pos);
 			int beginPos = estimateBeginingPosFromLIS(pos, lisResult);
+			printf("BEGIN %d - %d\n", beginPos, lisResult.size());
 
-			printf("BEGINNNNN %d\n", beginPos);
-			char info[250];
-			sprintf(info, "%ul, %d, %ul", lisResult.size(), beginPos, beginPos + read->getDataLen());
-			read->setMappingInfo(info);
-			return beginPos;
+			bioutil::Mapping mapping(lisResult.size(), beginPos, beginPos + read->getDataLen(), false);
+			read->addMapping(mapping);
 		} else {
 			std::vector<int> result;
 			calcLIS(&result, pos);

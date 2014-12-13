@@ -13,11 +13,11 @@
 #include <algorithm>
 
 #include "../util/BioUtil.h"
-#include "../core/Gene.h"
-#include "../core/Read.h"
-#include "../core/SuffixArray.h"
+#include "../util/Read.h"
+#include "../util/SuffixArray.h"
 #include "../util/UtilityFunctions.h"
 #include "../util/Mapper.h"
+#include "../util/Sequence.h"
 
 using namespace bioutil;
 
@@ -43,25 +43,26 @@ int main(int argc, char **argv) {
 	assert(isValidOutputFile(argv[3]));
 
 	FILE* fastaIn = fopen(argv[1], "r");
-	Gene *gen = new Gene;
-	gen->readGeneFromFASTA(fastaIn);
+	Sequence *seq = new Sequence;
+	seq->readSequenceFromFASTA(fastaIn);
 
 	SuffixArray *sa = new SuffixArray;
-	sa->constructFromGene(gen);
-
+	sa->constructFromSequence(seq);
+	Read r;
+	r.clean();
 	FILE* readsIn = fopen(argv[2], "r");
-	std::vector<bioutil::Read *> allReads;
-	Read::getAllReadsFromFASTQ(readsIn, allReads);
-
-	printf("Ucitani readovi\n");
-	int position = getPositionInGeneFromSuffixArray(allReads[0], sa);
-	printf("Pozicija\n");
-	assert(allReads.size() != 0);
-	printf("gotovooo %d\n", position);
+	Read read;
+	int cntr = 1;
+	while(read.readFromFASTQ(readsIn)) {
+	printf("Ucitan readovi\n");
+		int position = getPositionInSequenceFromSuffixArray(&read, sa);
+		printf("%d - %d", cntr++, position);
+	}
+	printf("gotovooo\n");
 
 	fclose(fastaIn);
 	fclose(readsIn);
-	delete gen;
+	delete seq;
 	delete sa;
 	return 0;
 }
