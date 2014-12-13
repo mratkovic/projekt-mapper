@@ -12,7 +12,6 @@
 
 #define NUM_OF_SYMBOLS 5
 
-
 inline bool leq(int a1, int a2, int b1, int b2) {
 	return (a1 < b1 || (a1 == b1 && a2 <= b2));
 }                                                   // and triples
@@ -43,12 +42,12 @@ int SuffixArray::findStartingPositions(char *pattern, size_t patternLen, int id,
 		mid = (lo + hi) / 2;
 		int cmp = this->compare(pattern, patternLen, _array[mid]);
 		if (cmp == 0) {
-			dest.push_back(std::make_pair (id, this->_array[mid]));
+			dest.push_back(std::make_pair(this->_array[mid], id));
 			for (lo = mid; lo > 0 && this->compare(pattern, patternLen, _array[lo - 1]) == 0; lo--) {
-				  dest.push_back(std::make_pair (id, this->_array[lo - 1]));
+				dest.push_back(std::make_pair(this->_array[lo - 1], id));
 			}
 			for (hi = mid; hi < this->_size && this->compare(pattern, patternLen, _array[hi + 1]) == 0; hi++) {
-				 dest.push_back(std::make_pair (id, this->_array[hi + 1]));
+				dest.push_back(std::make_pair(this->_array[hi + 1], id));
 			}
 
 			return hi - lo + 1;
@@ -79,7 +78,7 @@ void SuffixArray::printSuffixArray(FILE *file) {
 	fprintf(file, "%ld %ld \n", this->_size, this->_symbolNum);
 	for (int i = 0; i < _size; ++i) {
 		fprintf(file, "%lu", _array[i], _sequence[_array[i]]);
-		for(int j = _array[i]; j< 5 && j < this-> _size; ++j) {
+		for (int j = _array[i]; j < 5 && j < this->_size; ++j) {
 			fprintf(file, "%d", _sequence[j]);
 		}
 	}

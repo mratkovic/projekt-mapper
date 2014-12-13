@@ -9,6 +9,7 @@
 #define BIOUTIL_H_
 
 #include <cstring>
+#include <cctype>
 #include <cassert>
 
 static inline bool isValidBaseACGT(char base) {

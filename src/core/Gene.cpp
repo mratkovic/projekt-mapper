@@ -6,9 +6,7 @@
  */
 
 #include "Gene.h"
-#include "../util/Util.h"
 #include "../util/BioUtil.h"
-
 #include <cassert>
 #include <cctype>
 #include <cstdio>
@@ -19,9 +17,9 @@
 
 #include <unistd.h>
 
+#include "../util/UtilityFunctions.h"
+
 namespace bioutil {
-
-
 
 bool Gene::readGeneFromFASTA(FILE* inputFilePointer) {
 	static char buffer[1024];
