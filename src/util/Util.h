@@ -27,6 +27,23 @@ static inline size_t trimEnd(char *data) {
 }
 
 
+static inline size_t trimBegin(char *data) {
+	int cntr = 0, len = strlen(data);
+	while (isspace(data[cntr])) {
+		cntr++;
+	}
+	for (int i = 0; i < len - cntr; ++i) {
+		data[i] = data[i + cntr];
+	}
+	data[len - cntr] = 0;
+	return len - cntr;
+}
+
+static inline size_t trim(char *data) {
+	trimBegin(data);
+	return trimEnd(data);
+}
+
 static inline bool isValidOutputFile(const std::string& filePath) {
 	FILE* f = fopen(filePath.c_str(), "w");
 	if (f != NULL) {

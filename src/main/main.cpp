@@ -36,8 +36,8 @@ int main(int argc, char **argv) {
 	SuffixArray *sa = new SuffixArray;
 	sa -> constructFromGene(gen);
 
-	std::vector<std::pair<int, ulint> > positionsByKmer;
-	char pattern[]= "G";
+	std::vector<std::pair<int, int> > positionsByKmer;
+	char pattern[]= "ATTAAAACAG";
 
 	arrayBaseToInt(pattern, strlen(pattern));
 	int returnVal = sa->findStartingPositions(pattern, strlen(pattern), 1, positionsByKmer);
@@ -48,12 +48,15 @@ int main(int argc, char **argv) {
 
 	sa->printSuffixArray(fastaOut);
 	printf("gotovooo %d\n", returnVal);
+	for(int i = 0; i < returnVal && i < 10; ++i) {
+		printf("POS %lu\n", positionsByKmer[i].second);
+	}
 
 
 	fclose(fastaIn);
 	fclose(fastaOut);
-	free(gen);
-	free(sa);
+	delete gen;
+	delete sa;
 	return 0;
 }
 

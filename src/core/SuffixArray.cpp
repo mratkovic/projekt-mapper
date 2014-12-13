@@ -8,9 +8,10 @@
 #include "SuffixArray.h"
 #include <cstdio>
 #include <cstring>
+#include <algorithm>
 
 #define NUM_OF_SYMBOLS 5
-typedef unsigned long ulint;
+
 
 inline bool leq(int a1, int a2, int b1, int b2) {
 	return (a1 < b1 || (a1 == b1 && a2 <= b2));
@@ -19,8 +20,8 @@ inline bool leq(int a1, int a2, int a3, int b1, int b2, int b3) {
 	return (a1 < b1 || (a1 == b1 && leq(a2, a3, b2, b3)));
 }
 
-int SuffixArray::compare(char *pattern, size_t patternLen, ulint startPos) {
-	for (ulint i = startPos; i < std::min(this->_size, startPos + patternLen); ++i) {
+int SuffixArray::compare(char *pattern, size_t patternLen, int startPos) {
+	for (int i = startPos; i < std::min<int>(this->_size, (startPos + patternLen)); ++i) {
 		int diff = this->_sequence[i] - pattern[i - startPos];
 		if (diff != 0) {
 			return diff;
@@ -28,9 +29,13 @@ int SuffixArray::compare(char *pattern, size_t patternLen, ulint startPos) {
 	}
 	return 0;
 }
-ulint SuffixArray::findStartingPositions(char *pattern, size_t patternLen, ulint id,
-		std::vector<std::pair<int, ulint> > dest) {
-	ulint lo, hi, mid;
+
+SuffixArray::SuffixArray(FILE *f) {
+
+}
+int SuffixArray::findStartingPositions(char *pattern, size_t patternLen, int id,
+		std::vector<std::pair<int, int> > &dest) {
+	int lo, hi, mid;
 	lo = 0;
 	hi = this->_size;
 
@@ -38,7 +43,7 @@ ulint SuffixArray::findStartingPositions(char *pattern, size_t patternLen, ulint
 		mid = (lo + hi) / 2;
 		int cmp = this->compare(pattern, patternLen, _array[mid]);
 		if (cmp == 0) {
-
+			dest.push_back(std::make_pair (id, this->_array[mid]));
 			for (lo = mid; lo > 0 && this->compare(pattern, patternLen, _array[lo - 1]) == 0; lo--) {
 				  dest.push_back(std::make_pair (id, this->_array[lo - 1]));
 			}
@@ -64,35 +69,33 @@ void SuffixArray::constructFromGene(bioutil::Gene* gene) {
 		this->_size = gene->dataSize();
 	}
 
-	this->_array = (ulint *) malloc(this->_size * sizeof(ulint));
+	this->_array = (int *) malloc(this->_size * sizeof(int));
 	this->_sequence = (char *) malloc(this->_size * sizeof(char));
 	gene->turnBaseToInt(this->_sequence);
 	construct();
 }
 
 void SuffixArray::printSuffixArray(FILE *file) {
-
-	for (ulint i = 0; i < _size; ++i) {
-		fprintf(file, "%5lu-- %5lu  ", i, _array[i]);
-
-		for(ulint j = _array[i]; j < std::min(5+_array[i], _size); ++j) {
+	fprintf(file, "%ld %ld \n", this->_size, this->_symbolNum);
+	for (int i = 0; i < _size; ++i) {
+		fprintf(file, "%lu", _array[i], _sequence[_array[i]]);
+		for(int j = _array[i]; j< 5 && j < this-> _size; ++j) {
 			fprintf(file, "%d", _sequence[j]);
 		}
-
-		fprintf(file, "\n");
 	}
+	fprintf(file, "\n");
 }
 
 bool SuffixArray::construct() {
-	ulint *tmp = (ulint *) malloc(this->_size * sizeof(ulint));
-	for (ulint i = 0; i < this->_size; ++i) {
+	int *tmp = (int *) malloc(this->_size * sizeof(int));
+	for (int i = 0; i < this->_size; ++i) {
 		tmp[i] = this->_sequence[i];
 	}
 	SuffixArray::constructArray(tmp, this->_array, this->_size, NUM_OF_SYMBOLS);
 	free(tmp);
 }
 
-void SuffixArray::radixSortPass(ulint* in, ulint* out, ulint* sequence, ulint n, int numOfSymbols) {
+void SuffixArray::radixSortPass(int* in, int* out, int* sequence, int n, int numOfSymbols) {
 	int* cntr = new int[numOfSymbols];
 	for (int i = 0; i < numOfSymbols; i++) {
 		cntr[i] = 0;
@@ -101,35 +104,35 @@ void SuffixArray::radixSortPass(ulint* in, ulint* out, ulint* sequence, ulint n,
 		cntr[sequence[in[i]]]++;
 	}
 
-	for (ulint i = 0, sum = 0; i < numOfSymbols; i++) {
+	for (int i = 0, sum = 0; i < numOfSymbols; i++) {
 		int t = cntr[i];
 		cntr[i] = sum;
 		sum += t;
 	}
-	for (ulint i = 0; i < n; i++) {
+	for (int i = 0; i < n; i++) {
 		out[cntr[sequence[in[i]]]++] = in[i];
 	}
-	for (ulint i = 0; i < n; i++) {
+	for (int i = 0; i < n; i++) {
 	}
 	delete[] cntr;
 }
 
-void SuffixArray::constructArray(ulint* str, ulint* SA, ulint n, int K) {
-	ulint n0 = (n + 2) / 3;
-	ulint n1 = (n + 1) / 3;
-	ulint n2 = n / 3;
+void SuffixArray::constructArray(int* str, int* SA, int n, int K) {
+	int n0 = (n + 2) / 3;
+	int n1 = (n + 1) / 3;
+	int n2 = n / 3;
 
-	ulint n02 = n0 + n2;
+	int n02 = n0 + n2;
 
-	ulint* R12 = new ulint[n02 + 3];
+	int* R12 = new int[n02 + 3];
 	R12[n02] = R12[n02 + 1] = R12[n02 + 2] = 0;
 
-	ulint* SA12 = new ulint[n02 + 3];
+	int* SA12 = new int[n02 + 3];
 	SA12[n02] = SA12[n02 + 1] = SA12[n02 + 2] = 0;
 
 // R12 indeksi pocetaka mod 1 i mod 2 sufiksa
 // +(n0-n1) dodaje jedan viska mod 1 sufiks ako je n%3 == 1
-	for (ulint i = 0, j = 0; i < n + (n0 - n1); i++) {
+	for (int i = 0, j = 0; i < n + (n0 - n1); i++) {
 		if (i % 3 != 0) {
 			R12[j++] = i;
 		}
@@ -143,8 +146,8 @@ void SuffixArray::constructArray(ulint* str, ulint* SA, ulint n, int K) {
 //S12[i] opocetak i-tog po redu tripleta
 
 // dodjeliti tripletima lexikografska imena
-	ulint name = 0, c0 = -1, c1 = -1, c2 = -1;
-	for (ulint i = 0; i < n02; i++) {
+	int name = 0, c0 = -1, c1 = -1, c2 = -1;
+	for (int i = 0; i < n02; i++) {
 		if (str[SA12[i]] != c0 || str[SA12[i] + 1] != c1 || str[SA12[i] + 2] != c2) {
 			name++;
 			c0 = str[SA12[i]];
@@ -171,8 +174,8 @@ void SuffixArray::constructArray(ulint* str, ulint* SA, ulint n, int K) {
 			SA12[R12[i] - 1] = i;
 		}
 
-	ulint* R0 = new ulint[n0];
-	ulint* SA0 = new ulint[n0];
+	int* R0 = new int[n0 + 3];
+	int* SA0 = new int[n0 + 3];
 
 	for (int i = 0, j = 0; i < n02; i++)
 		if (SA12[i] < n0)
@@ -180,7 +183,7 @@ void SuffixArray::constructArray(ulint* str, ulint* SA, ulint n, int K) {
 	radixSortPass(R0, SA0, str, n0, K);
 
 // merge SA0 i SA12
-	for (ulint p = 0, t = n0 - n1, k = 0; k < n; k++) {
+	for (int p = 0, t = n0 - n1, k = 0; k < n; k++) {
 		//pozicija trenutnog 12 sufiksa
 		int i = SA12[t] < n0 ? SA12[t] * 3 + 1 : (SA12[t] - n0) * 3 + 2;
 		// pozicija trenutnog 0 sufiksa

@@ -12,20 +12,19 @@
 #include <vector>
 #include <utility>
 
-typedef unsigned long ulint;
 
 class SuffixArray {
 
 private:
-	ulint _size;
-	ulint* _array;
+	int _size;
+	int* _array;
 	char* _sequence;
 	int _symbolNum;
 
 	bool construct();
-	void constructArray(ulint* str, ulint* SA, ulint n, int numOfSymbols);
-	void radixSortPass(ulint* in, ulint* out, ulint* sequence, ulint n, int numOfSymbols);
-	int compare(char *pattern, size_t len, ulint startPosition);
+	void constructArray(int* str, int* SA, int n, int numOfSymbols);
+	void radixSortPass(int* in, int* out, int* sequence, int n, int numOfSymbols);
+	int compare(char *pattern, size_t len, int startPosition);
 
 
 public:
@@ -40,10 +39,11 @@ public:
 	SuffixArray(char* sequence, size_t size, int symbols) {
 		_sequence = sequence;
 		_size = size;
-		_array = (ulint *) malloc(_size * sizeof(ulint));
+		_array = (int *) malloc(_size * sizeof(int));
 		_symbolNum = symbols;
 		construct();
 	}
+	SuffixArray(FILE *file);
 
 	~SuffixArray() {
 		clear();
@@ -59,11 +59,11 @@ public:
 		_size = 0;
 	}
 
-	ulint findStartingPositions(char *pattern, size_t patternLen, ulint id, std::vector<std::pair<int, ulint> > d);
+	int findStartingPositions(char *pattern, size_t patternLen, int id, std::vector<std::pair<int, int> > &d);
 	void printSuffixArray(FILE *out);
 	void constructFromGene(bioutil::Gene* gene);
 
-	ulint getSize() const {
+	int getSize() const {
 		return _size;
 	}
 };

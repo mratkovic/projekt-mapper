@@ -15,12 +15,11 @@
 
 namespace bioutil {
 
-typedef unsigned long ulint;
 
 class Gene {
 private:
 	char* _data;
-	ulint _dataLen;
+	int _dataLen;
 	char* _description;
 
 public:
@@ -42,7 +41,7 @@ public:
 		return _description;
 	}
 
-	const ulint dataSize() const {
+	const int dataSize() const {
 		return _dataLen;
 	}
 

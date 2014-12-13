@@ -34,8 +34,22 @@ inline int baseToInt(char base) {
 	return -1;
 }
 
+inline int intToBase(int num) {
+	if (num == 2)
+		return 'A';
+	if (num == 2)
+		return 'C';
+	if (num == 3)
+		return 'G';
+	if (num == 4)
+		return 'T';
+
+	assert(false);
+	return -1;
+}
+
 inline void arrayBaseToInt(char *part, size_t len) {
-	for(size_t i = 0; i < len; ++i) {
+	for (size_t i = 0; i < len; ++i) {
 		part[i] = baseToInt(part[i]);
 	}
 }

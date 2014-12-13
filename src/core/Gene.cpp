@@ -21,6 +21,8 @@
 
 namespace bioutil {
 
+
+
 bool Gene::readGeneFromFASTA(FILE* inputFilePointer) {
 	static char buffer[1024];
 	this->clear();
@@ -36,7 +38,7 @@ bool Gene::readGeneFromFASTA(FILE* inputFilePointer) {
 
 	bool done = false;
 
-	while (!done) {  // read name()
+	while (!done) {
 		if (!fgets(buffer, sizeof buffer, inputFilePointer)) {
 			assert(dataLen == 0 && descriptionLen == 0);
 			return false;
@@ -54,14 +56,13 @@ bool Gene::readGeneFromFASTA(FILE* inputFilePointer) {
 	}
 
 	done = false;
-	while (!done) {  // read data()
+	while (!done) {
 		if (!fgets(buffer, sizeof buffer, inputFilePointer)) {
 			break;
 		} else if (buffer[0] == '>') {
 			break;
 		}
 		dataLen += trimEnd(buffer);
-		;
 
 		++numOfGetsForData;
 	}
@@ -111,7 +112,7 @@ size_t Gene::printGene(FILE* outputFilePointer, int width) {
 	printed += fprintf(outputFilePointer, "%s\n", this->_description);
 
 	for (size_t i = 0; i < this->dataSize(); i += width) {
-		for (size_t j = i; j < std::min(this->dataSize(), i + width); ++j) {
+		for (size_t j = i; j < std::min<int>(this->dataSize(), i + width); ++j) {
 			printed += fprintf(outputFilePointer, "%c", this->data(j));
 		}
 		printed += fprintf(outputFilePointer, "\n");
@@ -121,7 +122,7 @@ size_t Gene::printGene(FILE* outputFilePointer, int width) {
 }
 
 void Gene::turnBaseToInt(char* array) {
-	for (ulint i = 0; i < this->_dataLen; ++i) {
+	for (int i = 0; i < this->_dataLen; ++i) {
 		array[i] = baseToInt(this->_data[i]);
 	}
 }
