@@ -31,12 +31,6 @@ public:
 	inline int lobitOf(const int& a) {
 		return a & -a;
 	}
-	void updateSum(int pos, const T& val) {
-		++pos;
-		for (; pos < _elements.size(); pos += lobitOf(pos)) {
-			_elements[pos] = std::max(_elements[pos], val);
-		}
-	}
 
 	T getMax(int pos) {
 		++pos;

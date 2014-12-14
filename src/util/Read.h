@@ -13,14 +13,14 @@
 #include <vector>
 #include <set>
 #include "SuffixArray.h"
-#include "Mapping.h".h"
+#include "Mapping.h"
 namespace bioutil {
 
 class Read {
 private:
 	char* _id;
 	char* _data;
-	size_t _dataLen;
+	int _dataLen;
 	std::multiset<Mapping> _mappings;
 
 public:
@@ -31,9 +31,7 @@ public:
 	static void getAllReadsFromFASTQ(FILE * input, std::vector<Read*> &reads);
 	size_t printRead(FILE* outputFilePointer, int width = 80);
 
-	char getData(int i) const {
-		return _data[i];
-	}
+	char getData(int i, bool complement);
 	char* data() const {
 		return _data;
 	}
@@ -42,7 +40,7 @@ public:
 		return _id;
 	}
 
-	size_t getDataLen() const {
+	int getDataLen() const {
 		return _dataLen;
 	}
 
@@ -54,5 +52,4 @@ public:
 
 }
 /* namespace bioutil */
-
 #endif /* SRC_CORE_READ_H_ */

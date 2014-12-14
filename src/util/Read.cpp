@@ -10,7 +10,8 @@
 #include <cstring>
 
 #include "Read.h"
-#include "../util/UtilityFunctions.h"
+#include "UtilityFunctions.h"
+#include "BioUtil.h"
 
 #define LINE_SIZE 30000
 #define KEEP_FACTOR 2
@@ -23,10 +24,15 @@ Read::Read() {
 	_dataLen = 0;
 }
 Read::~Read() {
-	printf("Dest\n");
 	this->clean();
 }
 
+char Read::getData(int i, bool complement){
+	if (complement) {
+		return getACGTComplement(_data[_dataLen - 1 - i]);
+	}
+	return _data[i];
+}
 void Read::addMapping(Mapping m) {
 	this->_mappings.insert(m);
 	// update set
@@ -67,10 +73,13 @@ void Read::getAllReadsFromFASTQ(FILE* input, std::vector<Read*> &reads) {
 void Read::clean() {
 	if (this->_data) {
 		free(this->_data);
+		this->_data = 0;
 	}
 	if (this->_id) {
 		free(this->_id);
+		this->_id = 0;
 	}
+	_mappings.clear();
 }
 bool Read::readFromFASTQ(FILE* inputFile) {
 	char id[LINE_SIZE + 1];
@@ -114,11 +123,11 @@ bool Read::readFromFASTQ(FILE* inputFile) {
 size_t Read::printRead(FILE* outputFilePointer, int width) {
 	size_t printed = 0;
 	if (this->_mappings.size() > 0)
-		printed += fprintf(outputFilePointer, "%s\; %s", this->_id, this->getBestMapping().print());
+		//TODO printed += fprintf(outputFilePointer, "%s\; %s", this->_id, this->getBestMapping().print());
 
 	for (size_t i = 0; i < this->getDataLen(); i += width) {
 		for (size_t j = i; j < std::min<int>(this->getDataLen(), i + width); ++j) {
-			printed += fprintf(outputFilePointer, "%c", this->getData(j));
+			printed += fprintf(outputFilePointer, "%c", this->getData(j, false));
 		}
 		printed += fprintf(outputFilePointer, "\n");
 	}

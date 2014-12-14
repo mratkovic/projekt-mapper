@@ -12,7 +12,6 @@
 #include <utility>
 #include "Sequence.h"
 
-
 class SuffixArray {
 
 private:
@@ -25,7 +24,6 @@ private:
 	void constructArray(int* str, int* SA, int n, int numOfSymbols);
 	void radixSortPass(int* in, int* out, int* sequence, int n, int numOfSymbols);
 	int compare(char *pattern, size_t len, int startPosition);
-
 
 public:
 
@@ -44,27 +42,32 @@ public:
 		construct();
 	}
 	SuffixArray(FILE *file);
-
 	~SuffixArray() {
 		clear();
 	}
 
+	void setSequence(char* sequence) {
+		this->_sequence = sequence;
+	}
 	void clear() {
 		if (_array) {
 			free(_array);
-		}
-		if(_sequence){
-			free(_sequence);
+			_array = 0;
 		}
 		_size = 0;
 	}
 
 	int findStartingPositions(char *pattern, size_t patternLen, int id, std::vector<std::pair<int, int> > &d);
 	void printSuffixArray(FILE *out);
+
+	bool saveSuffixArray(FILE *out);
+	bool readSuffixArray(FILE *out);
+
 	void constructFromSequence(bioutil::Sequence* gene);
 
 	int getSize() const {
 		return _size;
 	}
+
 };
 #endif /* SUFFIXARRAY_H_ */

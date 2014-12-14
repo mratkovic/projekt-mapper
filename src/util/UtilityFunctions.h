@@ -43,7 +43,8 @@ inline size_t trim(char *data) {
 	return trimEnd(data);
 }
 
-inline bool isValidOutputFile(char*filePath) {
+inline bool canWriteToFIle(char*filePath) {
+	printf("W %s\n", filePath);
 	FILE* f = fopen(filePath, "w");
 	if (f != NULL) {
 		fclose(f);
@@ -52,9 +53,8 @@ inline bool isValidOutputFile(char*filePath) {
 	return false;
 }
 
-inline bool isValidInputFile(char*filePath) {
-	printf("%s\n", filePath);
-
+inline bool canReadFromFile(char*filePath) {
+	printf("R %s\n", filePath);
 	FILE* f = fopen(filePath, "r");
 
 	if (f != NULL) {
@@ -64,11 +64,13 @@ inline bool isValidInputFile(char*filePath) {
 	return false;
 }
 
-inline bool isValidFolder(char*folderPath) {
+inline bool isFolder(char*folderPath) {
 	DIR* dir = opendir(folderPath);
-	bool ok = (dir != NULL);
-	closedir(dir);
-	return ok;
+	if (dir != NULL) {
+		closedir(dir);
+		return true;
+	}
+	return false;
 }
 
 #endif

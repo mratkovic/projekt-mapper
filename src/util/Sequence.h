@@ -15,7 +15,6 @@
 
 namespace bioutil {
 
-
 class Sequence {
 private:
 	char* _data;
@@ -31,32 +30,34 @@ public:
 		clear();
 	}
 
-	const char* data() const {
+	char* data() {
 		return _data;
 	}
-	const char data(size_t i) const {
+	char data(size_t i) {
 		return _data[i];
 	}
-	const char* description() const {
+	char* description() {
 		return _description;
 	}
 
-	const int dataSize() const {
+	int dataSize() {
 		return _dataLen;
 	}
 
 	void clear() {
 		if (_data) {
 			free(_data);
+			_data = 0;
 		}
 		if (_description) {
 			free(_description);
+			_description = 0;
 		}
 		_dataLen = 0;
 	}
 	size_t printSequence(FILE* outputFilePointer, int width = 80);
 	bool readSequenceFromFASTA(FILE* inputFilePointer);
-	void turnBaseToInt(char* array);
+	void turnBaseToInt();
 };
 } /* namespace bioutil */
 

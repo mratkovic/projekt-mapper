@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstdio>
+#include <cstring>
 #include <vector>
 #include <utility>
 #include <algorithm>
@@ -23,47 +24,98 @@ using namespace bioutil;
 
 #define KHMER_SIZE 18;
 
-void solve(FILE* input, SuffixArray &sa) {
-	Read tmpRead;
-	while (tmpRead.readFromFASTQ(input)) {
+void displayInvalidCallMsg() {
+	printf("Invalid call\n");
+	printf("mapper construct <fastaFile> <suffixArrayOutputFile>\n");
+	printf("mapper map <fastaFile> <suffixArrayOutputFile> <reads> <resultOutputFile>\n");
+	exit(-1);
+}
 
+void constructSA(char* fastaInPath, char* saOutputPath) {
+	assert(canReadFromFile(fastaInPath));
+	assert(canWriteToFIle(saOutputPath));
 
+	FILE* fastaIn = fopen(fastaInPath, "r");
+	Sequence *seq = new Sequence;
+	printf("Reading sequence file %s\n", fastaInPath);
+	assert(seq->readSequenceFromFASTA(fastaIn) > 0);
+	fclose(fastaIn);
+
+	SuffixArray *sa = new SuffixArray;
+	printf("Constructing suffix array started\n");
+	sa->constructFromSequence(seq);
+	printf("Constructing suffix array completed\n");
+	printf("Size of array: %d\n", sa->getSize());
+
+	printf("Saving suffix array to %s\n", saOutputPath);
+	FILE* saOut = fopen(saOutputPath, "wb");
+	assert(sa->saveSuffixArray(saOut));
+	printf("Completed\n");
+
+	delete sa;
+	delete seq;
+
+	fclose(saOut);
+
+}
+
+void mapReads(char* fastaInPath, char* saFile, char* readsInPath, char* outputFile) {
+	assert(canReadFromFile(fastaInPath));
+	assert(canReadFromFile(saFile));
+	assert(canReadFromFile(readsInPath));
+	assert(canWriteToFIle(outputFile));
+
+	FILE* fastaIn = fopen(fastaInPath, "r");
+	Sequence *seq = new Sequence;
+
+	printf("Reading sequence file %s\n", fastaInPath);
+	assert(seq->readSequenceFromFASTA(fastaIn) > 0);
+	fclose(fastaIn);
+
+	FILE* saIn = fopen(saFile, "r");
+	printf("Reading suffix array from file\n");
+	SuffixArray *sa = new SuffixArray(saIn);
+	sa->setSequence(seq->data());
+	printf("SuffixArray read\n");
+	fclose(saIn);
+
+	FILE* readsIn = fopen(readsInPath, "r");
+	FILE* out = fopen(outputFile, "w");
+	Read singleRead;
+
+	int cntr = 0;
+	while (singleRead.readFromFASTQ(readsIn)) {
+		if(cntr++%1000 == 0) {
+			printf("--%d\n", cntr);
+		}
+		mapReadToSuffixArray(&singleRead, sa);
+		char mappingDetails[300];
+		singleRead.getBestMapping().fillDetails(mappingDetails);
+		fprintf(out, "%s - %s\n", singleRead.getId(), mappingDetails);
+		singleRead.clean();
 	}
+
+	printf("Completed\n");
+
+	fclose(readsIn);
+	fclose(out);
+
+	delete sa;
+	delete seq;
 }
 
 int main(int argc, char **argv) {
-	printf("%d\n", argc);
-	if (argc != 4) {
-		printf("nevalja\n");
-		exit(-1);
+
+	if (argc != 4 && argc != 6) {
+		displayInvalidCallMsg();
 	}
-
-	assert(isValidInputFile(argv[1]));
-	assert(isValidInputFile(argv[2]));
-	assert(isValidOutputFile(argv[3]));
-
-	FILE* fastaIn = fopen(argv[1], "r");
-	Sequence *seq = new Sequence;
-	seq->readSequenceFromFASTA(fastaIn);
-
-	SuffixArray *sa = new SuffixArray;
-	sa->constructFromSequence(seq);
-	Read r;
-	r.clean();
-	FILE* readsIn = fopen(argv[2], "r");
-	Read read;
-	int cntr = 1;
-	while(read.readFromFASTQ(readsIn)) {
-	printf("Ucitan readovi\n");
-		int position = getPositionInSequenceFromSuffixArray(&read, sa);
-		printf("%d - %d", cntr++, position);
+	if (!strcmp(argv[1], "construct") && argc == 4) {
+		constructSA(argv[2], argv[3]);
+	} else if (!strcmp(argv[1], "map") && argc == 6) {
+		mapReads(argv[2], argv[3], argv[4], argv[5]);
+	} else {
+		displayInvalidCallMsg();
 	}
-	printf("gotovooo\n");
-
-	fclose(fastaIn);
-	fclose(readsIn);
-	delete seq;
-	delete sa;
 	return 0;
 }
 

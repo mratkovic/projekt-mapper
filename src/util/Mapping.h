@@ -14,15 +14,17 @@ namespace bioutil {
 class Mapping {
 private:
 	double _score;
-	size_t _positionStart;
-	size_t _positionEnd;
+	int _positionStart;
+	int _positionEnd;
 	bool _isComplement;
+
+	//int* _editDistance;
 
 public:
 	Mapping();
-	Mapping(double score, size_t posStart, size_t posEnd, bool complemented);
+	Mapping(double score, int posStart, int posEnd, bool complemented);
 	virtual ~Mapping();
-	char* print();
+	void fillDetails(char* printBuffer);
 	bool operator <(const Mapping &other) const{
 		if (this->_score < other.getScore()) {
 			return true;
@@ -38,11 +40,11 @@ public:
 		return _score;
 	}
 
-	size_t getPositionEnd() const {
+	int getPositionEnd() const {
 		return _positionEnd;
 	}
 
-	size_t getPositionStart() const {
+	int getPositionStart() const {
 		return _positionStart;
 	}
 };

@@ -23,6 +23,7 @@
 namespace bioutil {
 
 bool Sequence::readSequenceFromFASTA(FILE* inputFilePointer) {
+
 	static char buffer[1024];
 	this->clear();
 
@@ -62,7 +63,6 @@ bool Sequence::readSequenceFromFASTA(FILE* inputFilePointer) {
 			break;
 		}
 		dataLen += trimEnd(buffer);
-
 		++numOfGetsForData;
 	}
 
@@ -101,7 +101,7 @@ bool Sequence::readSequenceFromFASTA(FILE* inputFilePointer) {
 		this->_data[i] = toupper(this->_data[i]);
 		assert(isValidBaseACGT(this->_data[i]));
 	}
-
+	printf("Sequence %s\n", this->description());
 	return dataLen > 0;
 }
 
@@ -120,9 +120,9 @@ size_t Sequence::printSequence(FILE* outputFilePointer, int width) {
 	return printed;
 }
 
-void Sequence::turnBaseToInt(char* array) {
+void Sequence::turnBaseToInt() {
 	for (int i = 0; i < this->_dataLen; ++i) {
-		array[i] = baseToInt(this->_data[i]);
+		this->_data[i] = baseACGTToInt(this->_data[i]);
 	}
 }
 

@@ -11,6 +11,8 @@
 #include <cstring>
 #include <cctype>
 #include <cassert>
+#include <cstdio>
+#include <map>
 
 static inline bool isValidBaseACGT(char base) {
 	if (base == 'A' || base == 'C' || base == 'G' || base == 'T') {
@@ -19,7 +21,7 @@ static inline bool isValidBaseACGT(char base) {
 		return false;
 	}
 }
-inline int baseToInt(char base) {
+inline int baseACGTToInt(char base) {
 	base = toupper(base);
 	assert(isValidBaseACGT(base));
 	if (base == 'A')
@@ -30,8 +32,6 @@ inline int baseToInt(char base) {
 		return 3;
 	if (base == 'T')
 		return 4;
-	// ???
-	assert(false);
 	return -1;
 }
 
@@ -49,9 +49,23 @@ inline int intToBase(int num) {
 	return -1;
 }
 
+inline char getACGTComplement(char base) {
+	base = toupper(base);
+	assert(isValidBaseACGT(base));
+	if (base == 'A')
+		return 'T';
+	if (base == 'T')
+		return 'A';
+	if (base == 'C')
+		return 'G';
+	if (base == 'G')
+		return 'C';
+	return -1;
+}
+
 inline void arrayBaseToInt(char *part, size_t len) {
 	for (size_t i = 0; i < len; ++i) {
-		part[i] = baseToInt(part[i]);
+		part[i] = baseACGTToInt(part[i]);
 	}
 }
 
