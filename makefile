@@ -1,38 +1,46 @@
-export INCLUDES := -I$(CURDIR)/src/
-export MAIN_DIR := $(CURDIR)/src/main/
-export UTIL_DIR := $(CURDIR)/src/util/
+PROJECT := mapper
 
-UTIL_H_FILES := $(wildcard $(UTIL_DIR)/*.h)
-UTIL_CPP_FILES := $(wildcard $(UTIL_DIR)/*.cpp)
-UTIL_OBJ_FILES := $(addprefix obj/util/,$(notdir $(UTIL_CPP_FILES:.cpp=.o)))
+INCLUDES := -I$(CURDIR)/src/
 
+SRC_DIR := $(CURDIR)/src/
+EXTERNAL_DIR := $(CURDIR)/src/external/
 
-MAIN_H_FILES := $(wildcard $(MAIN_DIR)/*.h)
-MAIN_CPP_FILES := $(wildcard $(MAIN_DIR)/*.cpp)
-MAIN_OBJ_FILES := $(addprefix obj/main/,$(notdir $(MAIN_CPP_FILES:.cpp=.o)))
+SRC_OBJ_DIR := $(CURDIR)/obj/src/
+EXTERNAL_OBJ_DIR := $(CURDIR)/obj/external/
 
-CC := g++
-LD_FLAGS := -Wall
-CC_FLAGS :=  $(INCLUDES)
+EXTERNAL_H_FILES := $(wildcard $(EXTERNAL_DIR)/*.h)
+EXTERNAL_CPP_FILES := $(wildcard $(EXTERNAL_DIR)/*.cpp)
+EXTERNAL_OBJ_FILES := $(addprefix $(EXTERNAL_OBJ_DIR),$(notdir $(EXTERNAL_CPP_FILES:.cpp=.o)))
 
-all: mapper 
+SRC_H_FILES := $(wildcard $(SRC_DIR)/*.h)
+SRC_CPP_FILES := $(wildcard $(SRC_DIR)/*.cpp)
+SRC_OBJ_FILES := $(addprefix $(SRC_OBJ_DIR),$(notdir $(SRC_CPP_FILES:.cpp=.o)))
 
-forceall: clean all
+CXX := g++
+CC := $(CXX)
+CXXFLAGS := -g -Wall -Wno-unused-function  $(INCLUDES) -fopenmp
+CC_FLAGS := $(CXXFLAGS)
+LD_FLAGS := -lz -fopenmp -ldivsufsort
+LD_LIBS := $(INCLUDES)
 
-mapper: $(MAIN_OBJ_FILES)  $(UTIL_OBJ_FILES)
-	$(CC) $(CC_FLAGS) -o $@ obj/util/*.o  obj/main/*.o  $(LD_FLAGS)
+all: $(PROJECT) 
 
+$(PROJECT): $(SRC_OBJ_FILES) $(EXTERNAL_OBJ_FILES)
+	$(CC) -o $@ $^  $(LD_FLAGS) $(LD_LIBS)
 
-$(UTIL_OBJ_FILES): $(UTIL_CPP_FILES) $(UTIL_H_FILES)
-	mkdir -p obj/util
-	$(CC) $(CC_FLAGS) -c -o $@ $(UTIL_DIR)/$(notdir $(patsubst %.o, %.cpp, $@))
+$(SRC_OBJ_FILES): $(SRC_CPP_FILES) $(SRC_H_FILES)
+	mkdir -p $(SRC_OBJ_DIR)
+	$(CC) $(CC_FLAGS) -c -o $@ $(SRC_DIR)/$(notdir $(patsubst %.o, %.cpp, $@))
 
+$(EXTERNAL_OBJ_FILES): $(EXTERNAL_CPP_FILES) $(EXTERNAL_H_FILES)
+	mkdir -p $(EXTERNAL_OBJ_DIR)
+	$(CC) $(CC_FLAGS) -c -o $@ $(EXTERNAL_DIR)/$(notdir $(patsubst %.o, %.cpp, $@))
 
-$(MAIN_OBJ_FILES): $(MAIN_CPP_FILES) $(MAIN_H_FILES)
-	mkdir -p obj/main
-	$(CC) $(CC_FLAGS) -c -o $@ $(MAIN_DIR)/$(notdir $(patsubst %.o, %.cpp, $@))
+run: $(PROJECT)
+	./$(PROJECT) $(COMMANDLINE_OPTIONS)
 
+.PHONY: clean
 
 clean:
 	rm -rf obj/
-	rm -f mapper
+	rm -f $(PROJECT)
