@@ -19,6 +19,8 @@
 
 #define KMER_K 20
 #define WINDOW_SIZE 2
+
+// TODO trenutno bzvz stoji samo
 #define MAX_NUMBER_OF_KMER_POSITIONS 1000000
 
 #define SSW_MATCH 1

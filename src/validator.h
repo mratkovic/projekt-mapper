@@ -11,6 +11,8 @@
 #include "read.h"
 #include <cstdio>
 
+#define TOLERATED_OFFSET 12
+
 namespace bioutil {
 
 class Validator {

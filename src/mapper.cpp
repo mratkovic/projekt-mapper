@@ -37,7 +37,6 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa, bool generateCIGA
 	fillMappings(read, sa);
 	fillMappings(reverse_complement, sa);
 
-	// malo sugavo izvedeno
 	Mapping* bestMapping = read->mapping();
 	Mapping* bestRevMapping = reverse_complement->mapping();
 	bestRevMapping->setComplement(true);
@@ -200,24 +199,24 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath, SuffixArray* 
 
 	for (int i = 0; i < threadNum; ++i) {
 		sprintf(tmpFilesNames[i], "tmp%d.out", i);
-		assert(canWriteToFIle(tmpFilesNames[i]));
+		assert(validateOutputFile(tmpFilesNames[i]));
 		tmpOutput[i] = fopen(tmpFilesNames[i], "w");
 	}
 	printf("Tmp files created\n");
 	int cntr = 0;
-#pragma omp parallel
+	#pragma omp parallel
 	{
-#pragma omp single
+		#pragma omp single
 		{
 			while (singleRead->readNextFromFASTQ(kseq)) {
 				Read* read = singleRead;
 
 				// create task solve single read
-#pragma omp task firstprivate(read) shared(tmpOutput) shared(sa) shared(seq)
+				#pragma omp task firstprivate(read) shared(tmpOutput) shared(sa) shared(seq)
 				{
 					mapReadToSuffixArray(read, sa, generateCIGAR);
 					read->printReadSAM(tmpOutput[omp_get_thread_num()], seq);
-					Validator::validateWGSIM(read);
+					//Validator::validateWGSIM(read);
 					delete read;
 				}
 
@@ -227,7 +226,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath, SuffixArray* 
 				}
 			}
 		}
-#pragma omp barrier
+		#pragma omp barrier
 	}
 
 	delete singleRead;

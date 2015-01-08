@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 
-inline bool canWriteToFIle(char*filePath) {
+inline bool validateOutputFile(char*filePath) {
 	printf("W %s\n", filePath);
 	FILE* f = fopen(filePath, "w");
 	if (f != NULL) {
@@ -19,7 +19,7 @@ inline bool canWriteToFIle(char*filePath) {
 	return false;
 }
 
-inline bool canReadFromFile(char*filePath) {
+inline bool validateInputFile(char*filePath) {
 	printf("R %s\n", filePath);
 	FILE* f = fopen(filePath, "r");
 

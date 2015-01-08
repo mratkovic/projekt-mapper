@@ -29,6 +29,7 @@
 #include "read.h"
 #include "sequence.h"
 #include "utility_functions.h"
+#include "validator.h"
 
 using namespace bioutil;
 
@@ -58,6 +59,15 @@ void constructSA(char* fastaInPath, char* saOutputPath);
 void mapReads(char* fastaInPath, char* saFile, char* readsInPath, char* outputFilePath);
 
 /**
+ * Method that validates SAM output file. Validation is done by comparison between
+ * test SAM file and reference SAM file.
+ *
+ * @param referenceFilePath path to SAM file containing valid information.
+ * @param testFilePath path to SAM file containing data that needs to be tested
+ */
+void validate(char* referenceFilePath, char* testFilePath);
+
+/**
  * Main method. Entry point of this project.
  *
  * @param parameters are described in header of this file
@@ -74,6 +84,8 @@ int main(int argc, char **argv) {
 	} else if (!strcmp(argv[1], "map") && argc == 6) {
 		mapReads(argv[2], argv[3], argv[4], argv[5]);
 
+	} else if (!strcmp(argv[1], "validate") && argc == 4) {
+		validate(argv[2], argv[3]);
 	} else {
 		displayInvalidCallMsg();
 	}
@@ -88,8 +100,8 @@ void displayInvalidCallMsg() {
 }
 
 void constructSA(char* fastaInPath, char* saOutputPath) {
-	assert(canReadFromFile(fastaInPath));
-	assert(canWriteToFIle(saOutputPath));
+	assert(validateInputFile(fastaInPath));
+	assert(validateOutputFile(saOutputPath));
 
 	FILE* fastaIn = fopen(fastaInPath, "r");
 	Sequence *seq = new Sequence;
@@ -114,10 +126,10 @@ void constructSA(char* fastaInPath, char* saOutputPath) {
 }
 
 void mapReads(char* fastaInPath, char* saFile, char* readsInPath, char* outputFilePath) {
-	assert(canReadFromFile(fastaInPath));
-	assert(canReadFromFile(saFile));
-	assert(canReadFromFile(readsInPath));
-	assert(canWriteToFIle(outputFilePath));
+	assert(validateInputFile(fastaInPath));
+	assert(validateInputFile(saFile));
+	assert(validateInputFile(readsInPath));
+	assert(validateOutputFile(outputFilePath));
 
 	FILE* fastaIn = fopen(fastaInPath, "r");
 	Sequence *seq = new Sequence;
@@ -137,5 +149,15 @@ void mapReads(char* fastaInPath, char* saFile, char* readsInPath, char* outputFi
 	delete sa;
 	delete seq;
 
+}
+
+void validate(char* referenceFilePath, char* testFilePath) {
+	assert(validateInputFile(referenceFilePath));
+	assert(validateInputFile(testFilePath));
+
+	FILE* refFile = fopen(referenceFilePath, "r");
+	FILE* testFile = fopen(testFilePath, "r");
+
+	Validator::validateSAM(refFile, testFile);
 }
 

@@ -28,13 +28,15 @@ SuffixArray::SuffixArray(FILE* in, const char* text, size_t textLen) {
 SuffixArray::~SuffixArray() {
 	text_ = NULL;
 }
-const int *SuffixArray::search(const char *pattern, int patternLen, int *numSolutions) {
+
+const int *SuffixArray::search(const char* pattern, int length, int* numOfSolution) {
 	int firstIndex;
-	*numSolutions = sa_search((const sauchar_t *) text_, textLen_, (const sauchar_t *) pattern, patternLen,
+
+	*numOfSolution = sa_search((const sauchar_t *) text_, textLen_, (const sauchar_t *) pattern, length,
 			&suffix_array_[0], textLen_, &firstIndex);
 
-	if (*numSolutions == -1) {
-		return numSolutions;
+	if (*numOfSolution == -1) {
+		return numOfSolution;
 	} else {
 		return &suffix_array_[firstIndex];
 	}
