@@ -22,14 +22,6 @@ Read::~Read() {
 	clear();
 }
 
-//void Read::addMapping(double score, uint32_t start, uint32_t end, bool isComplement, const char* cigar,
-//		uint32_t cigarLen) {
-//	if (score >= mapping_->score()) {
-//		delete mapping_;
-//		mapping_ = new Mapping(score, start, end, isComplement, cigar, cigarLen);
-//	}
-//
-//}
 
 void Read::addMapping(double score, uint32_t start, uint32_t end, bool isComplement, const char* cigar,
 		uint32_t cigarLen) {
@@ -41,9 +33,6 @@ void Read::addMapping(double score, uint32_t start, uint32_t end, bool isComplem
 		mappings_.erase(mappings_.begin());
 	}
 }
-//Mapping* Read::mapping() {
-//	return mapping_;
-//}
 
 Mapping* Read::bestMapping(uint32_t index) {
 	std::multiset<Mapping*, ptr_compare<Mapping> >::reverse_iterator it = mappings_.rbegin();
@@ -91,10 +80,7 @@ void Read::clear() {
 		delete[] quality_;
 		quality_ = 0;
 	}
-//	if (mapping_) {
-//		delete mapping_;
-//		mapping_ = 0;
-//	}
+
 	std::multiset<Mapping*, ptr_compare<Mapping> >::iterator it = mappings_.begin();
 	uint32_t cntr = 0;
 
@@ -141,15 +127,6 @@ Read* Read::getReverseComplement() {
 }
 void Read::printReadSAM(FILE* outFile, Sequence* seq) {
 	Mapping* best = bestMapping(0);
-//	if (mapping_->score() > 0) {
-//		fprintf(outFile, "%s\t%d\t%s\t%d\t%d\t%s\t%c\t%d\t%d\t%s\t%s\n", id_, mapping_->isComplement() ? 16 : 0,
-//				seq->info(), mapping_->start(), 99, mapping_->cigar(), '*', 0, 0, data_, quality_);
-//
-//		//	fprintf(outFile, "%s\t%d\t%d\t%s\t%f\n", id_, mapping_->isComplement() ? 16 : 0, mapping_->start(), mapping_->cigar(),
-//		//		mapping_->score());
-//
-//	}
-
 	fprintf(outFile, "%s\t%d\t%s\t%d\t%d\t%s\t%c\t%d\t%d\t%s\t%s\n", id_, best->isComplement() ? 16 : 0, seq->info(),
 			best->start(), 99, best->cigar(), '*', 0, 0, data_, quality_);
 

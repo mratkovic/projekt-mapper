@@ -44,7 +44,8 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa, bool generateCIGA
 	}
 
 	std::multiset<Mapping*, ptr_compare<Mapping> > tmp_set = read->mappings();
-	bool multiple = false;
+
+//	bool multiple = false;
 //	if (read->mappingsSize() > 3) {
 //		multiple = true;
 //		printf("%s, %d\n", read->id(), read->mappingsSize());
@@ -53,7 +54,6 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa, bool generateCIGA
 //		}
 //	}
 	read->mappings().clear();
-	int cntr = 0;
 
 	StripedSmithWaterman::Aligner aligner(SSW_MATCH, SSW_MISMATCH, SSW_GAP_OPEN, SSW_GAP_EXTEND);
 	StripedSmithWaterman::Filter filter;
@@ -77,7 +77,7 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa, bool generateCIGA
 //			if (multiple) {
 //				printf("SW %d\n", read->mappingsSize());
 //
-//				printf("\t%d.)%f --- %f, %d--miss%d %s\n", cntr++, (*it)->score(), (double) alignment.sw_score,
+//				printf("\t%d.) %f, %d--miss%d %s\n", cntr++, (double) alignment.sw_score,
 //						alignment.mismatches, (*it)->start(), alignment.cigar_string.c_str());
 //
 //			}
@@ -195,7 +195,7 @@ void copyFromTmpToFile(char* tmpFileName, FILE* src, FILE *dest) {
 
 void fillSAMHeader(FILE* out, Sequence* seq) {
 	fprintf(out, "@HD\tVN:1.4\tSQ:unsorted\n");
-	fprintf(out, "@SQ\tSN:%s\tLN:%u\n", seq->info(), seq->comment(), seq->dataLen());
+	fprintf(out, "@SQ\tSN:%s\tLN:%u\n", seq->info(), seq->dataLen());
 	fprintf(out, "@PG\tID:mapper\tPN:mapper\n");
 }
 

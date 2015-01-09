@@ -42,7 +42,6 @@ private:
 	char* quality_;
 
 	std::multiset<Mapping*, ptr_compare<Mapping> > mappings_;
-	//Mapping* mapping_;
 
 public:
 	Read();
@@ -60,7 +59,6 @@ public:
 	void addMapping(double score, uint32_t start, uint32_t end, bool isComplement, const char* cigar,
 			uint32_t cigarLen);
 
-//	Mapping* mapping();
 	std::multiset<Mapping*, ptr_compare<Mapping> >& mappings();
 	Mapping* bestMapping(uint32_t index);
 	uint32_t mappingsSize();
