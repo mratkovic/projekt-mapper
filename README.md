@@ -27,14 +27,22 @@ Nakon sta odaberemo regiju s najvećim LCSk, tada se na njoj provede Smith-Water
 libdivsufsort - https://code.google.com/p/libdivsufsort/
 
 <hr>Korištenje:</h3>
-<code>mapper construct 'fastaFile' 'suffixArrayOutputFile'</code>
-Za zadani genom u FASTA formatu unutar ulazne datoteke se izgradi sufiksno polje i pohrani u zadanu datoteku.
 
-<code>mapper map 'fastaFile' 'suffixArrayOutputFile' 'reads' 'resultOutputFile'</code>
+<p>
+<code>mapper construct 'fastaFile' 'suffixArrayOutputFile'</code><br>
+Za zadani genom u FASTA formatu unutar ulazne datoteke se izgradi sufiksno polje i pohrani u zadanu datoteku.
+</p>
+<p>
+<code>mapper map 'fastaFile' 'suffixArrayOutputFile' 'reads' 'resultOutputFile'</code><br>
 Na zadani referentni genom predan u FASTA formatu, korištenjem prethodno izgrađenog sufiksnog polja se mapiraju kratka očitanja pohranjena u FASTQ formatu unutar predane datoteke. Rezultat u SAM formatu se zapisuje u zadanu izlaznu datoteku.
+</p>
+<p>
+<code>mapper validate 'referenceSAM' 'testSAM'</code><br>
+Usporeduje početne pozicije readova testnog file-a s onima u referentnom, te ispise statistiku
+</p>
 
  
-<h4>Dodatno o LCSk matrici:<h4>
+<h4>Dodatno o LCSk matrici:</h4>
 1. G. Benson, A. Levy, and B. Shalom, “Longest common subsequence in k length
    substrings,” <br>
 2. Filip Pavetić, Goran Žužić, Mile Šikić "A simplified algorithm for the efficient computation of LCSk"
