@@ -128,7 +128,7 @@ Read* Read::getReverseComplement() {
 void Read::printReadSAM(FILE* outFile, Sequence* seq) {
 	Mapping* best = bestMapping(0);
 	fprintf(outFile, "%s\t%d\t%s\t%d\t%d\t%s\t%c\t%d\t%d\t%s\t%s\n", id_, best->isComplement() ? 16 : 0, seq->info(),
-			best->start(), 99, best->cigar(), '*', 0, 0, data_, quality_);
+			best->start() + 1, 99, best->cigar(), '*', 0, 0, data_, quality_);
 
 	//	fprintf(outFile, "%s\t%d\t%d\t%s\t%f\n", id_, mapping_->isComplement() ? 16 : 0, mapping_->start(), mapping_->cigar(),
 	//		mapping_->score());

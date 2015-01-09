@@ -23,11 +23,12 @@
 // TODO trenutno bzvz stoji samo
 #define MAX_NUMBER_OF_KMER_POSITIONS 1000000
 
-#define SSW_MATCH 1
-#define SSW_MISMATCH -1
-#define SSW_GAP_OPEN -2
-#define SSW_GAP_EXTEND -2
+#define SSW_MATCH 3
+#define SSW_MISMATCH 1
+#define SSW_GAP_OPEN 3
+#define SSW_GAP_EXTEND 2
 
+#define MAX_EDIT_DIST_FACTOR 0.1l
 
 namespace bioutil {
 

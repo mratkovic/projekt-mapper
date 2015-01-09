@@ -43,14 +43,25 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa, bool generateCIGA
 		read->addMapping((*it)->score(), (*it)->start(), (*it)->end(), true, NULL, 0);
 	}
 
+	if (!generateCIGAR) {
+		delete reverse_complement;
+		return;
+	}
+
 	std::multiset<Mapping*, ptr_compare<Mapping> > tmp_set = read->mappings();
 
-//	bool multiple = false;
+	//bool multiple = false;
 //	if (read->mappingsSize() > 3) {
 //		multiple = true;
 //		printf("%s, %d\n", read->id(), read->mappingsSize());
+//		printf("%.200s\n", read->data());
+//		printf("%.200s\n", reverse_complement->data());
 //		for (int i = 0; i < read->mappingsSize(); ++i) {
-//			printf("\t%d.)%f, %d %d\n", i, read->bestMapping(i)->score(), read->bestMapping(i)->start(), read->bestMapping(i)->isComplement());
+//			printf("%d.)%f, %d %d\n", i, read->bestMapping(i)->score(), read->bestMapping(i)->start(),
+//					read->bestMapping(i)->isComplement());
+//
+//			printf("%.200s\n", sa->text() + read->bestMapping(i)->start());
+//
 //		}
 //	}
 	read->mappings().clear();
@@ -58,36 +69,42 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa, bool generateCIGA
 	StripedSmithWaterman::Aligner aligner(SSW_MATCH, SSW_MISMATCH, SSW_GAP_OPEN, SSW_GAP_EXTEND);
 	StripedSmithWaterman::Filter filter;
 
+	uint32_t missmatchMaxNum = read->dataLen() * MAX_EDIT_DIST_FACTOR;
+
+	filter.score_filter = (read->dataLen() - missmatchMaxNum) * SSW_MATCH - missmatchMaxNum * SSW_MISMATCH;
+
 	for (it = tmp_set.rbegin(); it != tmp_set.rend(); ++it) {
 		int32_t start = (*it)->start();
 		uint32_t end = (*it)->end();
 
-		if (generateCIGAR) {
-			StripedSmithWaterman::Alignment alignment;
+		StripedSmithWaterman::Alignment alignment;
 
-			if ((*it)->isComplement()) {
-				aligner.Align(reverse_complement->data(), sa->text() + start, end - start, filter, &alignment);
-			} else {
-				aligner.Align(read->data(), sa->text() + start, end - start, filter, &alignment);
-			}
-
-			end = start + alignment.ref_end;
-			start += alignment.ref_begin;
-
-//			if (multiple) {
-//				printf("SW %d\n", read->mappingsSize());
-//
-//				printf("\t%d.) %f, %d--miss%d %s\n", cntr++, (double) alignment.sw_score,
-//						alignment.mismatches, (*it)->start(), alignment.cigar_string.c_str());
-//
-//			}
-			read->addMapping(-alignment.mismatches, start, end, (*it)->isComplement(), alignment.cigar_string.c_str(),
-					alignment.cigar_string.size());
+		if ((*it)->isComplement()) {
+			aligner.Align(reverse_complement->data(), sa->text() + start, end - start, filter, &alignment);
 		} else {
-			read->addMapping((*it)->score(), start, end, (*it)->isComplement(), NULL, 0);
+			aligner.Align(read->data(), sa->text() + start, end - start, filter, &alignment);
+		}
+
+		end = start + alignment.ref_end;
+		start += alignment.ref_begin;
+
+//		if (multiple) {
+//			printf("%d\n", filter.score_filter);
+//			printf("SW %d\n", read->mappingsSize());
+//			printf("%d.) %f, %d--miss%d %s\n", cntr++, (double) alignment.sw_score, alignment.mismatches,
+//					(*it)->start(), alignment.cigar_string.c_str());
+//
+//		}
+		if (alignment.cigar_string.size() == 0) {
+
+			read->addMapping(alignment.sw_score, start, end, (*it)->isComplement(), "NULAAA", 6);
+		} else {
+			read->addMapping(alignment.sw_score, start, end, (*it)->isComplement(), alignment.cigar_string.c_str(),
+					alignment.cigar_string.size());
 		}
 		delete (*it);
 	}
+
 	delete reverse_complement;
 
 }
@@ -99,7 +116,7 @@ void Mapper::fillMappings(Read* read, SuffixArray* sa) {
 	bool containsN = false;
 	uint32_t indexOfN;
 
-	// test first K bp for N
+// test first K bp for N
 	for (uint32_t i = 0; i < KMER_K; ++i) {
 		if (read->data()[i] == 'N') {
 			containsN = true;
@@ -107,7 +124,7 @@ void Mapper::fillMappings(Read* read, SuffixArray* sa) {
 		}
 	}
 
-	// skip kmers with N base
+// skip kmers with N base
 	for (uint32_t i = KMER_K; i < read->dataLen(); ++i) {
 		if (read->data()[i] == 'N') {
 			containsN = true;
