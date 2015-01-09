@@ -38,9 +38,9 @@ public:
 	const char* cigar();
 	void cigar(const char* cigar, uint32_t len);
 	void setComplement(bool complemented);
-	bool operator <(const Mapping &other) const{
-			return score_ <= other.score();
-		}
+	bool operator <(const Mapping &other) const {
+		return score_ <= other.score();
+	}
 
 };
 

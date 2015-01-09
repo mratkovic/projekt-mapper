@@ -96,6 +96,7 @@ void displayInvalidCallMsg() {
 	printf("Invalid call\n");
 	printf("mapper construct <fastaFile> <suffixArrayOutputFile>\n");
 	printf("mapper map <fastaFile> <suffixArrayOutputFile> <reads> <resultOutputFile>\n");
+	printf("mapper validate <referenceSAMfile> <testSAMfile>\n");
 	exit(-1);
 }
 

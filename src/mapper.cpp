@@ -37,37 +37,56 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa, bool generateCIGA
 	fillMappings(read, sa);
 	fillMappings(reverse_complement, sa);
 
-	Mapping* bestMapping = read->mapping();
-	Mapping* bestRevMapping = reverse_complement->mapping();
-	bestRevMapping->setComplement(true);
-
-	if (*bestMapping < *bestRevMapping) {
-		read->addMapping(bestRevMapping->score(), bestRevMapping->start(), bestRevMapping->end(),
-				bestRevMapping->isComplement(), NULL, 0);
-
-		bestMapping = read->mapping();
+	std::multiset<Mapping*, ptr_compare<Mapping> >::reverse_iterator it = reverse_complement->mappings().rbegin();
+	for (; it != reverse_complement->mappings().rend(); ++it) {
+		(*it)->setComplement(true);
+		read->addMapping((*it)->score(), (*it)->start(), (*it)->end(), true, NULL, 0);
 	}
 
-	int32_t start = bestMapping->start();
-	uint32_t end = bestMapping->end();
+	std::multiset<Mapping*, ptr_compare<Mapping> > tmp_set = read->mappings();
+	bool multiple = false;
+//	if (read->mappingsSize() > 3) {
+//		multiple = true;
+//		printf("%s, %d\n", read->id(), read->mappingsSize());
+//		for (int i = 0; i < read->mappingsSize(); ++i) {
+//			printf("\t%d.)%f, %d %d\n", i, read->bestMapping(i)->score(), read->bestMapping(i)->start(), read->bestMapping(i)->isComplement());
+//		}
+//	}
+	read->mappings().clear();
+	int cntr = 0;
 
-	if (generateCIGAR) {
-		StripedSmithWaterman::Aligner aligner(SSW_MATCH, SSW_MISMATCH, SSW_GAP_OPEN, SSW_GAP_EXTEND);
-		StripedSmithWaterman::Filter filter;
-		StripedSmithWaterman::Alignment alignment;
+	StripedSmithWaterman::Aligner aligner(SSW_MATCH, SSW_MISMATCH, SSW_GAP_OPEN, SSW_GAP_EXTEND);
+	StripedSmithWaterman::Filter filter;
 
-		if (bestMapping->isComplement()) {
-			aligner.Align(reverse_complement->data(), sa->text() + start, end - start, filter, &alignment);
+	for (it = tmp_set.rbegin(); it != tmp_set.rend(); ++it) {
+		int32_t start = (*it)->start();
+		uint32_t end = (*it)->end();
+
+		if (generateCIGAR) {
+			StripedSmithWaterman::Alignment alignment;
+
+			if ((*it)->isComplement()) {
+				aligner.Align(reverse_complement->data(), sa->text() + start, end - start, filter, &alignment);
+			} else {
+				aligner.Align(read->data(), sa->text() + start, end - start, filter, &alignment);
+			}
+
+			end = start + alignment.ref_end;
+			start += alignment.ref_begin;
+
+//			if (multiple) {
+//				printf("SW %d\n", read->mappingsSize());
+//
+//				printf("\t%d.)%f --- %f, %d--miss%d %s\n", cntr++, (*it)->score(), (double) alignment.sw_score,
+//						alignment.mismatches, (*it)->start(), alignment.cigar_string.c_str());
+//
+//			}
+			read->addMapping(-alignment.mismatches, start, end, (*it)->isComplement(), alignment.cigar_string.c_str(),
+					alignment.cigar_string.size());
 		} else {
-			aligner.Align(read->data(), sa->text() + start, end - start, filter, &alignment);
+			read->addMapping((*it)->score(), start, end, (*it)->isComplement(), NULL, 0);
 		}
-
-		end = start + alignment.ref_end;
-		start += alignment.ref_begin;
-
-		bestMapping->start(start);
-		bestMapping->end(end);
-		bestMapping->cigar(alignment.cigar_string.c_str(), alignment.cigar_string.size());
+		delete (*it);
 	}
 	delete reverse_complement;
 
@@ -189,7 +208,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath, SuffixArray* 
 	Read* singleRead = new Read;
 
 	int threadNum = omp_get_num_procs();
-	threadNum = 1;
+	//threadNum = 1;
 
 	omp_set_dynamic(0);
 	omp_set_num_threads(threadNum);
@@ -204,15 +223,15 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath, SuffixArray* 
 	}
 	printf("Tmp files created\n");
 	int cntr = 0;
-	#pragma omp parallel
+#pragma omp parallel
 	{
-		#pragma omp single
+#pragma omp single
 		{
 			while (singleRead->readNextFromFASTQ(kseq)) {
 				Read* read = singleRead;
 
 				// create task solve single read
-				#pragma omp task firstprivate(read) shared(tmpOutput) shared(sa) shared(seq)
+#pragma omp task firstprivate(read) shared(tmpOutput) shared(sa) shared(seq)
 				{
 					mapReadToSuffixArray(read, sa, generateCIGAR);
 					read->printReadSAM(tmpOutput[omp_get_thread_num()], seq);
@@ -226,7 +245,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath, SuffixArray* 
 				}
 			}
 		}
-		#pragma omp barrier
+#pragma omp barrier
 	}
 
 	delete singleRead;

@@ -22,7 +22,7 @@ bool getReadNameAndPositionFromSAM(std::string& name, uint32_t* position, FILE* 
 	buffer[BUFFER_LEN] = 0;
 
 	if (!fgets(buffer, BUFFER_LEN, in)) {
-		return false;;
+		return false;
 	}
 	bool wholeLine = buffer[10000] == 0;
 
@@ -32,26 +32,44 @@ bool getReadNameAndPositionFromSAM(std::string& name, uint32_t* position, FILE* 
 	strtok(NULL, "\t");
 
 	char* positionStr = strtok(NULL, "\t");
-	assert(sscanf(positionStr, "%u", &position) != 1);
+	assert(sscanf(positionStr, "%u", position) == 1);
 
 	if (!wholeLine) {
 		fscanf(in, "%*s");
 	}
+	uint32_t len = strlen(name_c);
+	if(name_c[len-2] == '/') {
+		// pair end in title, skip it
+		name_c[len-2] = 0;
+	}
 	name.assign(name_c);
+	return true;
 
 }
 
+void skipSAMHeader(FILE* in) {
+	char* buffer = new char[BUFFER_LEN + 1];
+	buffer[BUFFER_LEN] = 0;
+
+	fpos_t prevPos;
+	fgetpos(in, &prevPos);
+
+	while (fgets(buffer, BUFFER_LEN, in)) {
+		if (buffer[0] == '@') {
+			fgetpos(in, &prevPos);
+		} else {
+			fsetpos(in, &prevPos);
+			return;
+		}
+	}
+}
 void Validator::validateSAM(FILE* ref, FILE* test) {
 	uint32_t totalCntr = 0;
 	uint32_t wrongMapped = 0;
 	uint32_t notMapped = 0;
 	std::map<std::string, std::vector<uint32_t> > reads;
 
-	// TODO ad hoc
-	//skip first three lines
-	fscanf(ref, "%*[^\n]\n");
-	fscanf(ref, "%*[^\n]\n");
-	fscanf(ref, "%*[^\n]\n");
+	skipSAMHeader(ref);
 
 	while (true) {
 		std::string name;
@@ -59,6 +77,7 @@ void Validator::validateSAM(FILE* ref, FILE* test) {
 		if (!getReadNameAndPositionFromSAM(name, &position, ref)) {
 			break;
 		}
+		++totalCntr;
 		std::map<std::string, std::vector<uint32_t> >::iterator it = reads.find(name);
 		if (it == reads.end()) {
 			std::vector<uint32_t> vector(0);
@@ -67,24 +86,28 @@ void Validator::validateSAM(FILE* ref, FILE* test) {
 		reads[name].push_back(position);
 	}
 
-	fscanf(test, "%*[^\n]\n");
-	fscanf(test, "%*[^\n]\n");
-	fscanf(test, "%*[^\n]\n");
+	skipSAMHeader(test);
 
 	while (true) {
 		std::string name;
 		uint32_t position;
-		getReadNameAndPositionFromSAM(name, &position, ref);
+		if (!getReadNameAndPositionFromSAM(name, &position, test)) {
+			break;
+		}
 
 		std::map<std::string, std::vector<uint32_t> >::iterator it = reads.find(name);
 
 		if (it == reads.end()) {
 			++notMapped;
 		} else if (abs(position - it->second[0]) > TOLERATED_OFFSET) {
+			printf("%s  --%u  --%u\n",name.c_str(), it->second[0], position);
 			++wrongMapped;
 		}
-		scanf("%*d");
 	}
+
+	printf("Total reads in reference file: %u\n", totalCntr);
+	printf("Not mapped: %u\n", notMapped);
+	printf("Mapped to wrong position: %u\n", wrongMapped);
 
 }
 void Validator::validateWGSIM(Read* read) {

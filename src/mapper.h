@@ -26,7 +26,7 @@
 #define SSW_MATCH 1
 #define SSW_MISMATCH -1
 #define SSW_GAP_OPEN -2
-#define SSW_GAP_EXTEND -1
+#define SSW_GAP_EXTEND -2
 
 
 namespace bioutil {
