@@ -22,6 +22,7 @@ private:
 	uint32_t dataLen_;
 	char* info_;
 	char* comment_;
+	bool basesAsInt;
 
 public:
 	Sequence();
@@ -29,6 +30,8 @@ public:
 	~Sequence();
 	void clear();
 	void readSequenceFromFASTA(FILE* fastaIn);
+	void allBasesToSmallInt();
+	void allBasesToLetters();
 	const char* data();
 	uint32_t dataLen();
 	const char* info();

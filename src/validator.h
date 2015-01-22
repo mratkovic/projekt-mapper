@@ -18,7 +18,7 @@ namespace bioutil {
 class Validator {
 public:
 	static void validateSAM(FILE* ref, FILE* test);
-	static void validateWGSIM(Read* read);
+	static void validateWGSIM(FILE* readsIn,  FILE* sam);
 };
 
 } /* namespace bioutil */

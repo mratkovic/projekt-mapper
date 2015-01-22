@@ -41,6 +41,7 @@ private:
 	char* optional_identifier_;
 	char* quality_;
 
+	bool basesAsInt;
 	std::multiset<Mapping*, ptr_compare<Mapping> > mappings_;
 
 public:
@@ -49,6 +50,9 @@ public:
 
 	void clear();
 	bool readNextFromFASTQ(kseq_t *seq);
+	void allBasesToSmallInt();
+	void allBasesToLetters();
+
 	Read* getReverseComplement();
 	void printReadSAM(FILE* outFile, Sequence* seq);
 

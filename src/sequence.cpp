@@ -10,6 +10,7 @@
 #include "sequence.h"
 #include "external/kseq.h"
 #include "utility_functions.h"
+#include "bioutil.h"
 
 namespace bioutil {
 
@@ -20,11 +21,13 @@ Sequence::Sequence(char* data, uint32_t dataLen, char* info, char* comment) {
 	dataLen_ = dataLen;
 	info_ = info;
 	comment_ = comment;
+	basesAsInt = false;
 
 }
 Sequence::Sequence() {
 	data_ = info_ = comment_ = NULL;
 	dataLen_ = 0;
+	basesAsInt = false;
 }
 Sequence::~Sequence() {
 	clear();
@@ -61,7 +64,6 @@ uint32_t Sequence::dataLen() {
 
 void Sequence::readSequenceFromFASTA(FILE* fastaIn) {
 	clear();
-
 	kseq_t *seq = kseq_init(fileno(fastaIn));
 
 	assert(kseq_read(seq) >= 0);
@@ -81,6 +83,26 @@ void Sequence::readSequenceFromFASTA(FILE* fastaIn) {
 	memcpy(data_, seq->seq.s, dataLen_);
 
 	kseq_destroy(seq);
+}
+void Sequence::allBasesToSmallInt() {
+	if (basesAsInt) {
+		return;
+	}
+
+	for (uint32_t i = 0; i < dataLen_; ++i) {
+		data_[i] = baseToInt(data_[i]);
+	}
+	basesAsInt = true;
+}
+void Sequence::allBasesToLetters() {
+	if (!basesAsInt) {
+		return;
+	}
+
+	for (uint32_t i = 0; i < dataLen_; ++i) {
+		data_[i] = intToBase(data_[i]);
+	}
+	basesAsInt = false;
 }
 
 }

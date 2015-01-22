@@ -136,6 +136,7 @@ void mapReads(char* fastaInPath, char* saFile, char* readsInPath, char* outputFi
 	Sequence *seq = new Sequence;
 	printf("Reading sequence file %s\n", fastaInPath);
 	seq->readSequenceFromFASTA(fastaIn);
+	seq->allBasesToSmallInt();
 	fclose(fastaIn);
 
 	FILE* saIn = fopen(saFile, "rb");

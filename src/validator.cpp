@@ -38,9 +38,40 @@ bool getReadNameAndPositionFromSAM(std::string& name, uint32_t* position, FILE* 
 		fscanf(in, "%*s");
 	}
 	uint32_t len = strlen(name_c);
-	if(name_c[len-2] == '/') {
+	if (name_c[len - 2] == '/') {
 		// pair end in title, skip it
-		name_c[len-2] = 0;
+		name_c[len - 2] = 0;
+	}
+	name.assign(name_c);
+	return true;
+
+}
+
+bool getReadNameAndPositionFromWGSIM(std::string& name, uint32_t* position, FILE* in) {
+	//ime \t flag \t referenceName \t position \t cigar .....
+	char* buffer = new char[BUFFER_LEN + 1];
+	buffer[BUFFER_LEN] = 0;
+
+	if (!fgets(buffer, BUFFER_LEN, in)) {
+		return false;
+	}
+	bool wholeLine = buffer[10000] == 0;
+
+	char* name_c;
+	name_c = strtok(buffer, "\t");
+	strtok(NULL, "\t");
+	strtok(NULL, "\t");
+
+	char* positionStr = strtok(NULL, "\t");
+	assert(sscanf(positionStr, "%u", position) == 1);
+
+	if (!wholeLine) {
+		fscanf(in, "%*s");
+	}
+	uint32_t len = strlen(name_c);
+	if (name_c[len - 2] == '/') {
+		// pair end in title, skip it
+		name_c[len - 2] = 0;
 	}
 	name.assign(name_c);
 	return true;
@@ -100,7 +131,7 @@ void Validator::validateSAM(FILE* ref, FILE* test) {
 		if (it == reads.end()) {
 			++notMapped;
 		} else if (abs(position - it->second[0]) > TOLERATED_OFFSET) {
-			printf("%s  --%u  --%u\n",name.c_str(), it->second[0], position);
+			//printf("%s  --%u  --%u\n", name.c_str(), it->second[0], position);
 			++wrongMapped;
 		}
 	}
@@ -108,12 +139,13 @@ void Validator::validateSAM(FILE* ref, FILE* test) {
 	printf("Total reads in reference file: %u\n", totalCntr);
 	printf("Not mapped: %u\n", notMapped);
 	printf("Mapped to wrong position: %u\n", wrongMapped);
+	printf("%d / %d / %d\n", notMapped, wrongMapped, totalCntr);
 
 }
-void Validator::validateWGSIM(Read* read) {
-	//wgsim header
-	//readID_posStart_posEnd_.....
+void Validator::validateWGSIM(FILE* readsIn, FILE* sam) {
 	// TODO
+
+
 }
 
 } /* namespace bioutil */

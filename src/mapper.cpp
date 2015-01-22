@@ -9,6 +9,7 @@
 
 #include "external/ssw_cpp.h"
 #include "external/kseq.h"
+#include "external/edlib.h"
 #include "bioutil.h"
 #include "mapper.h"
 #include "mapping.h"
@@ -33,6 +34,7 @@ void Mapper::getKmerPositions(Read* read, SuffixArray* sa, std::vector<std::pair
 	}
 }
 void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa, bool generateCIGAR) {
+	read->allBasesToSmallInt();
 	Read* reverse_complement = read->getReverseComplement();
 	fillMappings(read, sa);
 	fillMappings(reverse_complement, sa);
@@ -50,8 +52,8 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa, bool generateCIGA
 
 	std::multiset<Mapping*, ptr_compare<Mapping> > tmp_set = read->mappings();
 
-	//bool multiple = false;
-//	if (read->mappingsSize() > 3) {
+//	bool multiple = false;
+//	if (read->mappingsSize() > 9) {
 //		multiple = true;
 //		printf("%s, %d\n", read->id(), read->mappingsSize());
 //		printf("%.200s\n", read->data());
@@ -64,29 +66,45 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa, bool generateCIGA
 //
 //		}
 //	}
+//	int cntr = 0;
+
 	read->mappings().clear();
 
-	StripedSmithWaterman::Aligner aligner(SSW_MATCH, SSW_MISMATCH, SSW_GAP_OPEN, SSW_GAP_EXTEND);
-	StripedSmithWaterman::Filter filter;
-
-	uint32_t missmatchMaxNum = read->dataLen() * MAX_EDIT_DIST_FACTOR;
-
-	filter.score_filter = (read->dataLen() - missmatchMaxNum) * SSW_MATCH - missmatchMaxNum * SSW_MISMATCH;
+//	StripedSmithWaterman::Aligner aligner(SSW_MATCH, SSW_MISMATCH, SSW_GAP_OPEN, SSW_GAP_EXTEND);
+//	StripedSmithWaterman::Filter filter;
+//uint32_t missmatchMaxNum = read->dataLen() * MAX_EDIT_DIST_FACTOR;
+//	filter.score_filter = (read->dataLen() - missmatchMaxNum) * SSW_MATCH - missmatchMaxNum * SSW_MISMATCH;
 
 	for (it = tmp_set.rbegin(); it != tmp_set.rend(); ++it) {
 		int32_t start = (*it)->start();
 		uint32_t end = (*it)->end();
 
-		StripedSmithWaterman::Alignment alignment;
+//		StripedSmithWaterman::Alignment alignment;
+//
+//		if ((*it)->isComplement()) {
+//			aligner.Align(reverse_complement->data(), sa->text() + start, end - start, filter, &alignment);
+//		} else {
+//			aligner.Align(read->data(), sa->text() + start, end - start, filter, &alignment);
+//		}
+
+		int score, numLocations, alignmentLength;
+		int* startLocations;
+		int* endLocations;
+		unsigned char* alignment;
 
 		if ((*it)->isComplement()) {
-			aligner.Align(reverse_complement->data(), sa->text() + start, end - start, filter, &alignment);
-		} else {
-			aligner.Align(read->data(), sa->text() + start, end - start, filter, &alignment);
-		}
+			edlibCalcEditDistance((const unsigned char *) reverse_complement->data(), reverse_complement->dataLen(),
+					(const unsigned char *) (sa->text() + start), end - start, 5, -1, EDLIB_MODE_NW, true, true,
+					&score, &endLocations, &startLocations, &numLocations, &alignment, &alignmentLength);
 
-		end = start + alignment.ref_end;
-		start += alignment.ref_begin;
+		} else {
+			edlibCalcEditDistance((const unsigned char *) read->data(), read->dataLen(),
+					(const unsigned char *) (sa->text() + start), end - start, 5, -1, EDLIB_MODE_NW, true, true,
+					&score, &endLocations, &startLocations, &numLocations, &alignment, &alignmentLength);
+		}
+//
+//		end = start + alignment.ref_end;
+//		start += alignment.ref_begin;
 
 //		if (multiple) {
 //			printf("%d\n", filter.score_filter);
@@ -95,12 +113,28 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa, bool generateCIGA
 //					(*it)->start(), alignment.cigar_string.c_str());
 //
 //		}
-		if (alignment.cigar_string.size() == 0) {
 
-			read->addMapping(alignment.sw_score, start, end, (*it)->isComplement(), "NULAAA", 6);
-		} else {
-			read->addMapping(alignment.sw_score, start, end, (*it)->isComplement(), alignment.cigar_string.c_str(),
-					alignment.cigar_string.size());
+//		if (alignment.cigar_string.size() == 0) {
+//
+//			read->addMapping(alignment.sw_score, start, end, (*it)->isComplement(), "NULAAA", 6);
+//		} else {
+//			read->addMapping(alignment.sw_score, start, end, (*it)->isComplement(), alignment.cigar_string.c_str(),
+//					alignment.cigar_string.size());
+//		}
+
+		char* cigar;
+		edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_EXTENDED, &cigar);
+
+		read->addMapping(score, start, end, (*it)->isComplement(), cigar, strlen(cigar));
+		free(cigar);
+		if (endLocations) {
+			free(endLocations);
+		}
+		if (startLocations) {
+			free(startLocations);
+		}
+		if (alignment) {
+			free(alignment);
 		}
 		delete (*it);
 	}
@@ -118,6 +152,7 @@ void Mapper::fillMappings(Read* read, SuffixArray* sa) {
 
 // test first K bp for N
 	for (uint32_t i = 0; i < KMER_K; ++i) {
+		// TODO prominit u numerical N
 		if (read->data()[i] == 'N') {
 			containsN = true;
 			indexOfN = i;
@@ -185,12 +220,18 @@ void Mapper::runLIS(int startIndex, int endIndex, std::vector<std::pair<uint32_t
 void Mapper::runLCSk(int startIndex, int endIndex, std::vector<std::pair<uint32_t, uint32_t> > &pos, Read* read) {
 	std::vector<std::pair<uint32_t, uint32_t> > lcsKData;
 
+	// TODO Provjera koliko kmera se nalazi izmedu start i end
+	// te ukoliko je manje od mog minimuma preskoci
+//	if(endIndex - startIndex < read->dataLen() / 2) {
+//		return;
+//	}
+
 	for (int i = startIndex; i < endIndex; ++i) {
 		lcsKData.push_back(pos[i]);
 	}
 
 	std::vector<std::pair<uint32_t, uint32_t> > result;
-	uint32_t score = LCSk::calcLCSk(KMER_K, &result, lcsKData);
+	uint32_t score = LCSk::calcLCSkpp(KMER_K, &result, lcsKData);
 
 	//result contains pairs (refPos, readPos)
 	int32_t beginPos = result[0].first - result[0].second;
@@ -239,16 +280,17 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath, SuffixArray* 
 		tmpOutput[i] = fopen(tmpFilesNames[i], "w");
 	}
 	printf("Tmp files created\n");
-	int cntr = 0;
-#pragma omp parallel
+	//int cntr = 0;
+
+	#pragma omp parallel
 	{
-#pragma omp single
+		#pragma omp single
 		{
 			while (singleRead->readNextFromFASTQ(kseq)) {
 				Read* read = singleRead;
 
 				// create task solve single read
-#pragma omp task firstprivate(read) shared(tmpOutput) shared(sa) shared(seq)
+				#pragma omp task firstprivate(read) shared(tmpOutput) shared(sa) shared(seq)
 				{
 					mapReadToSuffixArray(read, sa, generateCIGAR);
 					read->printReadSAM(tmpOutput[omp_get_thread_num()], seq);
@@ -257,9 +299,9 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath, SuffixArray* 
 				}
 
 				singleRead = new Read();
-				if (++cntr % 10000 == 0) {
-					printf("--%d\n", cntr++);
-				}
+//				if (++cntr % 10000 == 0) {
+//					printf("--%d\n", cntr++);
+//				}
 			}
 		}
 #pragma omp barrier

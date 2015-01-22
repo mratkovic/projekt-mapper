@@ -16,12 +16,12 @@ namespace bioutil {
 Read::Read() {
 	id_ = data_ = optional_identifier_ = quality_ = 0;
 	dataLen_ = 0;
+	basesAsInt = false;
 	//mapping_ = new Mapping;
 }
 Read::~Read() {
 	clear();
 }
-
 
 void Read::addMapping(double score, uint32_t start, uint32_t end, bool isComplement, const char* cigar,
 		uint32_t cigarLen) {
@@ -113,13 +113,37 @@ bool Read::readNextFromFASTQ(kseq_t* seq) {
 	return true;
 }
 
+void Read::allBasesToSmallInt() {
+	if (basesAsInt) {
+		return;
+	}
+
+	for (uint32_t i = 0; i < dataLen_; ++i) {
+		data_[i] = baseToInt(data_[i]);
+	}
+	basesAsInt = true;
+}
+void Read::allBasesToLetters() {
+	if (!basesAsInt) {
+		return;
+	}
+	for (uint32_t i = 0; i < dataLen_; ++i) {
+		data_[i] = intToBase(data_[i]);
+	}
+	basesAsInt = false;
+}
+
 Read* Read::getReverseComplement() {
 	Read *rev = new Read();
 	rev->dataLen_ = dataLen_;
 	rev->data_ = new char[dataLen_ + 1];
 
 	for (uint32_t i = 0; i < dataLen_; ++i) {
-		rev->data_[i] = getACGTComplement(data_[dataLen_ - 1 - i]);
+		if (basesAsInt) {
+			rev->data_[i] = getACGTComplementAsSmallInt(data_[dataLen_ - 1 - i]);
+		} else {
+			rev->data_[i] = getACGTComplement(data_[dataLen_ - 1 - i]);
+		}
 	}
 	rev->data_[dataLen_] = 0;
 	return rev;
@@ -127,11 +151,12 @@ Read* Read::getReverseComplement() {
 }
 void Read::printReadSAM(FILE* outFile, Sequence* seq) {
 	Mapping* best = bestMapping(0);
-	fprintf(outFile, "%s\t%d\t%s\t%d\t%d\t%s\t%c\t%d\t%d\t%s\t%s\n", id_, best->isComplement() ? 16 : 0, seq->info(),
-			best->start() + 1, 99, best->cigar(), '*', 0, 0, data_, quality_);
+	if (best != NULL) {
+		allBasesToLetters();
+		fprintf(outFile, "%s\t%d\t%s\t%d\t%d\t%s\t%c\t%d\t%d\t%s\t%s\n", id_, best->isComplement() ? 16 : 0,
+				seq->info(), best->start() + 1, 99, best->cigar(), '*', 0, 0, data_, quality_);
+	}
 
-	//	fprintf(outFile, "%s\t%d\t%d\t%s\t%f\n", id_, mapping_->isComplement() ? 16 : 0, mapping_->start(), mapping_->cigar(),
-	//		mapping_->score());
 
 }
 
