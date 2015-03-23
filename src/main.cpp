@@ -23,12 +23,12 @@
 #include <algorithm>
 #include <omp.h>
 
-#include "bioutil.h"
-#include "mapper.h"
-#include "suffix_array.h"
-#include "read.h"
-#include "sequence.h"
-#include "utility_functions.h"
+#include "bioutil/bioutil.h"
+#include "core/mapper.h"
+#include "core/suffix_array.h"
+#include "bioutil/read.h"
+#include "bioutil/sequence.h"
+#include "util/utility_functions.h"
 #include "validator.h"
 
 using namespace bioutil;

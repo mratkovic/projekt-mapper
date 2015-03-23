@@ -8,7 +8,7 @@
 #ifndef SRC_VALIDATOR_H_
 #define SRC_VALIDATOR_H_
 
-#include "read.h"
+#include "bioutil/read.h"
 #include <cstdio>
 
 #define TOLERATED_OFFSET 12
