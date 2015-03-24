@@ -107,7 +107,12 @@ void constructSA(char* fastaInPath, char* saOutputPath) {
 	FILE* fastaIn = fopen(fastaInPath, "r");
 	Sequence *seq = new Sequence;
 	printf("Reading sequence file %s\n", fastaInPath);
-	seq->readSequenceFromFASTA(fastaIn);
+	seq->readSequencesFromFASTA(fastaIn);
+	printf("Number of sequences: %lu\n", (unsigned long) seq->numOfSequences());
+
+	for(uint32_t i = 0; i < seq->numOfSequences(); ++i) {
+	  printf("\t%d: %s: [%d]\n", i, seq->info(i));
+	}
 	fclose(fastaIn);
 
 	printf("Constructing suffix array started\n");
@@ -135,7 +140,7 @@ void mapReads(char* fastaInPath, char* saFile, char* readsInPath, char* outputFi
 	FILE* fastaIn = fopen(fastaInPath, "r");
 	Sequence *seq = new Sequence;
 	printf("Reading sequence file %s\n", fastaInPath);
-	seq->readSequenceFromFASTA(fastaIn);
+	seq->readSequencesFromFASTA(fastaIn);
 	seq->allBasesToSmallInt();
 	fclose(fastaIn);
 

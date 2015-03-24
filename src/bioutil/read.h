@@ -17,7 +17,6 @@
 #include "../core/suffix_array.h"
 #include "../core/mapping.h"
 
-namespace bioutil {
 
 KSEQ_INIT(int, read)
 
@@ -43,7 +42,7 @@ class Read {
   void allBasesToLetters();
 
   Read* getReverseComplement();
-  void printReadSAM(FILE* outFile, Sequence* seq);
+  void printReadSAM(FILE* outFile, bioutil::Sequence* seq);
 
   const char* data();
   const char* id();
@@ -69,6 +68,4 @@ class Read {
 
 };
 
-}
-/* namespace bioutil */
 #endif /* SRC_CORE_READ_H_ */

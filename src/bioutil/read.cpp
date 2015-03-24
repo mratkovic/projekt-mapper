@@ -11,8 +11,7 @@
 #define LINE_SIZE 30000
 #define KEEP_FACTOR 1l
 
-namespace bioutil {
-
+using namespace bioutil;
 Read::Read() {
   id_ = data_ = optional_identifier_ = quality_ = 0;
   dataLen_ = 0;
@@ -157,10 +156,12 @@ void Read::printReadSAM(FILE* outFile, Sequence* seq) {
   Mapping* best = bestMapping(0);
   if (best != NULL) {
     allBasesToLetters();
+
+    uint32_t seqIndex = seq->sequenceIndex(best->start());
+    uint32_t start = seq->positionInSeq(best->start());
+
     fprintf(outFile, "%s\t%d\t%s\t%d\t%d\t%s\t%c\t%d\t%d\t%s\t%s\n", id_,
-            best->isComplement() ? 16 : 0, seq->info(), best->start() + 1, 99,
+            best->isComplement() ? 16 : 0, seq->info(seqIndex), start + 1, 99,
             best->cigar(), '*', 0, 0, data_, quality_);
   }
-}
-/* namespace bioutil */
 }

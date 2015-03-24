@@ -30,28 +30,30 @@
 
 #define MAX_EDIT_DIST_FACTOR 0.1l
 
+using namespace bioutil;
+
 class Mapper {
 
  private:
   static void runLIS(int startIndex, int endIndex,
                      std::vector<std::pair<uint32_t, uint32_t> > &pos,
-                     bioutil::Read* read);
+                     Read* read);
   static void runLCSk(int startIndex, int endIndex,
                       std::vector<std::pair<uint32_t, uint32_t> > &pos,
-                      bioutil::Read* read);
+                      Read* read);
 
-  static void mapReadToSuffixArray(bioutil::Read* read, SuffixArray* sa,
+  static void mapReadToSuffixArray(Read* read, SuffixArray* sa,
                                    bool generateCIGAR);
   static void getKmerPositions(
-      bioutil::Read* read, SuffixArray* sa,
+      Read* read, SuffixArray* sa,
       std::vector<std::pair<uint32_t, uint32_t> > &positions, int kmerStart);
-  static void fillMappings(bioutil::Read* read, SuffixArray* sa);
-  static void getPositions(bioutil::Read* read, SuffixArray* sa,
+  static void fillMappings(Read* read, SuffixArray* sa);
+  static void getPositions(Read* read, SuffixArray* sa,
                            bool complement);
 
  public:
   static void mapAllReads(char* readsInPath, char* solutionOutPath,
-                          SuffixArray* sa, bioutil::Sequence* seq,
+                          SuffixArray* sa, Sequence* seq,
                           bool generateCIGAR);
 
 };

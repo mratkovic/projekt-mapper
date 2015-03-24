@@ -260,6 +260,8 @@ void Mapper::runLCSk(int startIndex, int endIndex,
   int32_t beginPos = result[0].first - result[0].second;
   beginPos = std::max(beginPos, 0);
 
+
+
   read->addMapping(score, beginPos, beginPos + read->dataLen(), false, NULL, 0);
 }
 
@@ -276,7 +278,10 @@ void copyFromTmpToFile(char* tmpFileName, FILE* src, FILE *dest) {
 
 void fillSAMHeader(FILE* out, Sequence* seq) {
   fprintf(out, "@HD\tVN:1.4\tSQ:unsorted\n");
-  fprintf(out, "@SQ\tSN:%s\tLN:%u\n", seq->info(), seq->dataLen());
+
+  for(int i = 0; i < seq->numOfSequences(); ++i) {
+    fprintf(out, "@SQ\tSN:%s\tLN:%u\n", seq->info(i), seq->seqLen(i));
+  }
   fprintf(out, "@PG\tID:mapper\tPN:mapper\n");
 }
 
