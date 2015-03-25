@@ -161,7 +161,7 @@ void Read::printReadSAM(FILE* outFile, Sequence* seq) {
     uint32_t start = seq->positionInSeq(best->start());
 
     fprintf(outFile, "%s\t%d\t%s\t%d\t%d\t%s\t%c\t%d\t%d\t%s\t%s\n", id_,
-            best->isComplement() ? 16 : 0, seq->info(seqIndex), start + 1, 99,
+            best->isComplement() ? 16 : 0, seq->info(seqIndex), start + 1, (uint32_t)best->score(),
             best->cigar(), '*', 0, 0, data_, quality_);
   }
 }

@@ -57,41 +57,11 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
   }
 
   std::multiset<Mapping*, ptr_compare<Mapping> > tmp_set = read->mappings();
-
-//	bool multiple = false;
-//	if (read->mappingsSize() > 9) {
-//		multiple = true;
-//		printf("%s, %d\n", read->id(), read->mappingsSize());
-//		printf("%.200s\n", read->data());
-//		printf("%.200s\n", reverse_complement->data());
-//		for (int i = 0; i < read->mappingsSize(); ++i) {
-//			printf("%d.)%f, %d %d\n", i, read->bestMapping(i)->score(), read->bestMapping(i)->start(),
-//					read->bestMapping(i)->isComplement());
-//
-//			printf("%.200s\n", sa->text() + read->bestMapping(i)->start());
-//
-//		}
-//	}
-//	int cntr = 0;
-
   read->mappings().clear();
 
-//	StripedSmithWaterman::Aligner aligner(SSW_MATCH, SSW_MISMATCH, SSW_GAP_OPEN, SSW_GAP_EXTEND);
-//	StripedSmithWaterman::Filter filter;
-//uint32_t missmatchMaxNum = read->dataLen() * MAX_EDIT_DIST_FACTOR;
-//	filter.score_filter = (read->dataLen() - missmatchMaxNum) * SSW_MATCH - missmatchMaxNum * SSW_MISMATCH;
-
   for (it = tmp_set.rbegin(); it != tmp_set.rend(); ++it) {
-    int32_t start = (*it)->start();
-    uint32_t end = (*it)->end();
-
-//		StripedSmithWaterman::Alignment alignment;
-//
-//		if ((*it)->isComplement()) {
-//			aligner.Align(reverse_complement->data(), sa->text() + start, end - start, filter, &alignment);
-//		} else {
-//			aligner.Align(read->data(), sa->text() + start, end - start, filter, &alignment);
-//		}
+    int32_t start = std::max<uint32_t>(0, (*it)->start() - 25);
+    uint32_t end = std::min<uint32_t>(sa->size(), (*it)->end() + 25);
 
     int score, numLocations, alignmentLength;
     int* startLocations;
@@ -102,7 +72,7 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
       edlibCalcEditDistance((const unsigned char *) reverse_complement->data(),
                             reverse_complement->dataLen(),
                             (const unsigned char *) (sa->text() + start),
-                            end - start, 5, -1, EDLIB_MODE_NW, true, true,
+                            end - start, 5, -1, EDLIB_MODE_HW, true, true,
                             &score, &endLocations, &startLocations,
                             &numLocations, &alignment, &alignmentLength);
 
@@ -110,35 +80,17 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
       edlibCalcEditDistance((const unsigned char *) read->data(),
                             read->dataLen(),
                             (const unsigned char *) (sa->text() + start),
-                            end - start, 5, -1, EDLIB_MODE_NW, true, true,
+                            end - start, 5, -1, EDLIB_MODE_HW, true, true,
                             &score, &endLocations, &startLocations,
                             &numLocations, &alignment, &alignmentLength);
     }
-//
-//		end = start + alignment.ref_end;
-//		start += alignment.ref_begin;
-
-//		if (multiple) {
-//			printf("%d\n", filter.score_filter);
-//			printf("SW %d\n", read->mappingsSize());
-//			printf("%d.) %f, %d--miss%d %s\n", cntr++, (double) alignment.sw_score, alignment.mismatches,
-//					(*it)->start(), alignment.cigar_string.c_str());
-//
-//		}
-
-//		if (alignment.cigar_string.size() == 0) {
-//
-//			read->addMapping(alignment.sw_score, start, end, (*it)->isComplement(), "NULAAA", 6);
-//		} else {
-//			read->addMapping(alignment.sw_score, start, end, (*it)->isComplement(), alignment.cigar_string.c_str(),
-//					alignment.cigar_string.size());
-//		}
 
     char* cigar;
     edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_EXTENDED,
                           &cigar);
 
-    read->addMapping(score, start, end, (*it)->isComplement(), cigar,
+    score = read->dataLen() - score;
+    read->addMapping((*it)->score(), start, end, (*it)->isComplement(), cigar,
                      strlen(cigar));
     free(cigar);
     if (endLocations) {
@@ -254,13 +206,11 @@ void Mapper::runLCSk(int startIndex, int endIndex,
   }
 
   std::vector<std::pair<uint32_t, uint32_t> > result;
-  uint32_t score = LCSk::calcLCSkpp(KMER_K, &result, lcsKData);
+  uint32_t score = LCSk::calcLCSk(KMER_K, &result, lcsKData);
 
   //result contains pairs (refPos, readPos)
   int32_t beginPos = result[0].first - result[0].second;
   beginPos = std::max(beginPos, 0);
-
-
 
   read->addMapping(score, beginPos, beginPos + read->dataLen(), false, NULL, 0);
 }
@@ -279,7 +229,7 @@ void copyFromTmpToFile(char* tmpFileName, FILE* src, FILE *dest) {
 void fillSAMHeader(FILE* out, Sequence* seq) {
   fprintf(out, "@HD\tVN:1.4\tSQ:unsorted\n");
 
-  for(int i = 0; i < seq->numOfSequences(); ++i) {
+  for (int i = 0; i < seq->numOfSequences(); ++i) {
     fprintf(out, "@SQ\tSN:%s\tLN:%u\n", seq->info(i), seq->seqLen(i));
   }
   fprintf(out, "@PG\tID:mapper\tPN:mapper\n");

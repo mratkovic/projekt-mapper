@@ -111,7 +111,7 @@ void constructSA(char* fastaInPath, char* saOutputPath) {
 	printf("Number of sequences: %lu\n", (unsigned long) seq->numOfSequences());
 
 	for(uint32_t i = 0; i < seq->numOfSequences(); ++i) {
-	  printf("\t%d: %s: [%d]\n", i, seq->info(i));
+	  printf("\t%d: %s: [%d]\n", i, seq->info(i), seq->seqLen(i));
 	}
 	fclose(fastaIn);
 

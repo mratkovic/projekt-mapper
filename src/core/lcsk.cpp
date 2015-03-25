@@ -12,185 +12,234 @@
 #include "../util/fenwick.h"
 
 struct Event {
-	uint32_t first;
-	uint32_t second;
-	bool isStart; // start or end;
-	uint32_t index;
-	Event(uint32_t first, uint32_t second, bool isStart, uint32_t index) :
-			first(first), second(second), isStart(isStart), index(index) {
-	}
+  uint32_t first;
+  uint32_t second;
+  bool isStart;  // start or end;
+  uint32_t index;
+  Event(uint32_t first, uint32_t second, bool isStart, uint32_t index)
+      : first(first),
+        second(second),
+        isStart(isStart),
+        index(index) {
+  }
 
 };
 
 bool operator<(const Event &a, const Event &b) {
-	if (a.first != b.first)
-		return a.first < b.first;
+  if (a.first != b.first)
+    return a.first < b.first;
 
-	if (a.second != b.second)
-		return a.second < b.second;
+  if (a.second != b.second)
+    return a.second < b.second;
 
-	return a.isStart < b.isStart;
+  return a.isStart < b.isStart;
 }
 
-void reconstructLCSk(std::vector<std::pair<uint32_t, uint32_t> >& elements, uint32_t k, std::vector<int>& prevIndex,
-		int lastIndex, int lcskLen, std::vector<std::pair<uint32_t, uint32_t> >* reconstruction) {
+void reconstructLCSk(
+    std::vector<std::pair<uint32_t, uint32_t> >& elements, uint32_t k,
+    std::vector<int>& prevIndex, int lastIndex, int lcskLen,
+    std::vector<std::pair<uint32_t, uint32_t> >* reconstruction) {
 
-	reconstruction->clear();
-	reconstruction->reserve(lcskLen);
+  reconstruction->clear();
+  reconstruction->reserve(lcskLen);
 
-	int index = lastIndex;
-	while (index != -1) {
-		int refEndIndex = elements[index].first + k - 1;
-		int readEndIndex = elements[index].second + k - 1;
+  int index = lastIndex;
+  while (index != -1) {
+    int refEndIndex = elements[index].first + k - 1;
+    int readEndIndex = elements[index].second + k - 1;
 
-		for (uint32_t j = 0; j < k; ++j) {
-			reconstruction->push_back(std::make_pair(refEndIndex - j, readEndIndex - j));
-		}
+    for (uint32_t j = 0; j < k; ++j) {
+      reconstruction->push_back(
+          std::make_pair(refEndIndex - j, readEndIndex - j));
+    }
 
-		index = prevIndex[index];
-	}
+    index = prevIndex[index];
+  }
 
-	std::reverse(reconstruction->begin(), reconstruction->end());
+  std::reverse(reconstruction->begin(), reconstruction->end());
 }
 
-uint32_t LCSk::calcLCSk(uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >* result,
-		std::vector<std::pair<uint32_t, uint32_t> >& elements) {
+void reconstructLCSkpp(
+    std::vector<std::pair<uint32_t, uint32_t> >& elements, uint32_t k,
+    std::vector<int>& prevIndex, int lastIndex, int lcskLen,
+    std::vector<std::pair<uint32_t, uint32_t> >* reconstruction) {
 
-	if (elements.empty()) {
-		result->clear();
-		return 0;
-	}
+  reconstruction->clear();
+  reconstruction->reserve(lcskLen);
 
-	std::vector<Event> events;
-	events.reserve(2 * elements.size());
-	uint32_t n = 0;
+  int index = lastIndex;
+  while (index != -1) {
+    int refEndIndex = elements[index].first + k - 1;
+    int readEndIndex = elements[index].second + k - 1;
 
-	for (uint32_t i = 0; i < elements.size(); ++i) {
-		std::pair<uint32_t, uint32_t> element = elements[i];
+    int prev = prevIndex[index];
+    uint32_t howManyElements;
 
-		events.push_back(Event(element.first, element.second, true, i));
-		events.push_back(Event(element.first + k, element.second + k, false, i));
+    bool takeWhole = prev == -1;
+    if (elements[prev].first + k <= elements[index].first
+        && elements[prev].second + k <= elements[index].second) {
+      takeWhole = true;
+    }
 
-		n = std::max(n, element.second + k);
-	}
-	sort(events.begin(), events.end());
+    if (takeWhole) {
+      howManyElements = k;
+    } else {
+      int curr_secondary_diag = (elements[index].first + elements[index].second)
+          / 2;
+      int prev_secondary_diag = (elements[prev].first + elements[prev].second)
+          / 2;
+      howManyElements = curr_secondary_diag - prev_secondary_diag;
+    }
+    for (uint32_t j = 0; j < howManyElements; ++j) {
+      reconstruction->push_back(
+          std::make_pair(refEndIndex - j, readEndIndex - j));
+    }
+    index = prevIndex[index];
+  }
 
-	// Indexed by column, first:dp value, second:index in elements
-	Fenwick<std::pair<uint32_t, uint32_t> > maxColDp(n);
-
-	std::vector<uint32_t> dp(elements.size());
-	std::vector<int> recon(elements.size());
-
-	uint32_t lcskLen = 0;
-	uint32_t bestIndex = 0;
-
-	for (auto event = events.begin(); event != events.end(); ++event) {
-		int index = event->index;
-
-		if (event->isStart) {
-			std::pair<int, int> max = maxColDp.getMax(event->second);
-			dp[index] = k;
-			recon[index] = -1;
-
-			if (max.first > 0) {
-				dp[index] = max.first + k;
-				recon[index] = max.second;
-			}
-
-		} else {
-
-			maxColDp.updateMax(event->second, std::make_pair(dp[index], index));
-
-			if (dp[index] > lcskLen) {
-				lcskLen = dp[index];
-				bestIndex = index;
-			}
-		}
-	}
-
-	reconstructLCSk(elements, k, recon, bestIndex, lcskLen, result);
-
-	return lcskLen;
+  std::reverse(reconstruction->begin(), reconstruction->end());
 }
 
-uint32_t LCSk::calcLCSkpp(uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >* result,
-		std::vector<std::pair<uint32_t, uint32_t> >& elements) {
+uint32_t LCSk::calcLCSk(uint32_t k,
+                        std::vector<std::pair<uint32_t, uint32_t> >* result,
+                        std::vector<std::pair<uint32_t, uint32_t> >& elements) {
 
-	if (elements.empty()) {
-		result->clear();
-		return 0;
-	}
+  if (elements.empty()) {
+    result->clear();
+    return 0;
+  }
 
-	std::vector<Event> events;
-	events.reserve(2 * elements.size());
-	uint32_t n = 0;
+  std::vector<Event> events;
+  events.reserve(2 * elements.size());
+  uint32_t n = 0;
 
-	for (uint32_t i = 0; i < elements.size(); ++i) {
-		std::pair<uint32_t, uint32_t> element = elements[i];
+  for (uint32_t i = 0; i < elements.size(); ++i) {
+    std::pair<uint32_t, uint32_t> element = elements[i];
 
-		events.push_back(Event(element.first, element.second, true, i));
-		events.push_back(Event(element.first + k, element.second + k, false, i));
+    events.push_back(Event(element.first, element.second, true, i));
+    events.push_back(Event(element.first + k, element.second + k, false, i));
 
-		n = std::max(n, element.second + k);
-	}
-	sort(events.begin(), events.end());
+    n = std::max(n, element.second + k);
+  }
+  sort(events.begin(), events.end());
 
-	// Indexed by column, first:dp value, second:index in elements
-	Fenwick<std::pair<uint32_t, uint32_t> > maxColDp(n);
+  // Indexed by column, first:dp value, second:index in elements
+  Fenwick<std::pair<uint32_t, uint32_t> > maxColDp(n);
 
-	std::vector<uint32_t> dp(elements.size());
-	std::vector<int> recon(elements.size());
-	std::vector<int> continues(elements.size(), -1);
+  std::vector<uint32_t> dp(elements.size());
+  std::vector<int> recon(elements.size());
 
-	// find pairs continuing each other
-	if (k > 1) {
-		std::vector<std::pair<uint32_t, uint32_t> >::iterator it;
-		std::vector<std::pair<uint32_t, uint32_t> >::iterator prevIt;
+  uint32_t lcskLen = 0;
+  uint32_t bestIndex = 0;
 
-		for (it = elements.begin(); it != elements.end(); ++it) {
-			std::pair<uint32_t, uint32_t> prevElement = std::make_pair(it->first - 1, it->second - 1);
-			prevIt = std::lower_bound(elements.begin(), elements.end(), prevElement);
-			if (*prevIt == prevElement) {
-				continues[it - elements.begin()] = prevIt - elements.begin();
-			}
-		}
-	}
+  for (auto event = events.begin(); event != events.end(); ++event) {
+    int index = event->index;
 
-	uint32_t lcskppLen = 0;
-	uint32_t bestIndex = 0;
+    if (event->isStart) {
+      std::pair<int, int> max = maxColDp.getMax(event->second);
+      dp[index] = k;
+      recon[index] = -1;
 
-	for (std::vector<Event>::iterator event = events.begin(); event != events.end(); ++event) {
-		int index = event->index;
+      if (max.first > 0) {
+        dp[index] = max.first + k;
+        recon[index] = max.second;
+      }
 
-		if (event->isStart) {
-			std::pair<int, int> max = maxColDp.getMax(event->second);
-			dp[index] = k;
-			recon[index] = -1;
+    } else {
 
-			if (max.first > 0) {
-				dp[index] = max.first + k;
-				recon[index] = max.second;
-			}
+      maxColDp.updateMax(event->second, std::make_pair(dp[index], index));
 
-		} else {
+      if (dp[index] > lcskLen) {
+        lcskLen = dp[index];
+        bestIndex = index;
+      }
+    }
+  }
 
-			if (continues[index] != -1) {
-				if (dp[continues[index]] + 1 > dp[index]) {
-					dp[index] = dp[continues[index]] + 1;
-					recon[index] = continues[index];
-				}
-			}
-			maxColDp.updateMax(event->second, std::make_pair(dp[index], index));
+  reconstructLCSk(elements, k, recon, bestIndex, lcskLen, result);
+  return lcskLen;
+}
 
-			if (dp[index] > lcskppLen) {
-				lcskppLen = dp[index];
-				bestIndex = index;
-			}
-		}
-	}
+uint32_t LCSk::calcLCSkpp(
+    uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >* result,
+    std::vector<std::pair<uint32_t, uint32_t> >& elements) {
 
-	reconstructLCSk(elements, k, recon, bestIndex, lcskppLen, result);
+  if (elements.empty()) {
+    result->clear();
+    return 0;
+  }
 
-	return lcskppLen;
+  std::vector<Event> events;
+  events.reserve(2 * elements.size());
+  uint32_t n = 0;
+
+  for (uint32_t i = 0; i < elements.size(); ++i) {
+    std::pair<uint32_t, uint32_t> element = elements[i];
+
+    events.push_back(Event(element.first, element.second, true, i));
+    events.push_back(Event(element.first + k, element.second + k, false, i));
+
+    n = std::max(n, element.second + k);
+  }
+  sort(events.begin(), events.end());
+
+  // Indexed by column, first:dp value, second:index in elements
+  Fenwick<std::pair<uint32_t, uint32_t> > maxColDp(n);
+
+  std::vector<uint32_t> dp(elements.size());
+  std::vector<int> recon(elements.size());
+  std::vector<int> continues(elements.size(), -1);
+
+  // find pairs continuing each other
+  if (k > 1) {
+    std::vector<std::pair<uint32_t, uint32_t> >::iterator it;
+    std::vector<std::pair<uint32_t, uint32_t> >::iterator prevIt;
+
+    for (it = elements.begin(); it != elements.end(); ++it) {
+      std::pair<uint32_t, uint32_t> prevElement = std::make_pair(
+          it->first - 1, it->second - 1);
+      prevIt = std::lower_bound(elements.begin(), elements.end(), prevElement);
+      if (*prevIt == prevElement) {
+        continues[it - elements.begin()] = prevIt - elements.begin();
+      }
+    }
+  }
+
+  uint32_t lcskppLen = 0;
+  uint32_t bestIndex = 0;
+
+  for (std::vector<Event>::iterator event = events.begin();
+      event != events.end(); ++event) {
+    int index = event->index;
+
+    if (event->isStart) {
+      std::pair<int, int> max = maxColDp.getMax(event->second);
+      dp[index] = k;
+      recon[index] = -1;
+
+      if (max.first > 0) {
+        dp[index] = max.first + k;
+        recon[index] = max.second;
+      }
+
+    } else {
+
+      if (continues[index] != -1) {
+        if (dp[continues[index]] + 1 > dp[index]) {
+          dp[index] = dp[continues[index]] + 1;
+          recon[index] = continues[index];
+        }
+      }
+      maxColDp.updateMax(event->second, std::make_pair(dp[index], index));
+
+      if (dp[index] > lcskppLen) {
+        lcskppLen = dp[index];
+        bestIndex = index;
+      }
+    }
+  }
+
+  reconstructLCSkpp(elements, k, recon, bestIndex, lcskppLen, result);
+  return lcskppLen;
 }
 

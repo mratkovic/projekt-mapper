@@ -100,7 +100,7 @@ void Sequence::readSequencesFromFASTA(FILE* fastaIn) {
 
     currentSize += dataLen;
   }
-
+  kseq_destroy(seq);
 }
 
 void Sequence::readSingleSequenceFromFASTA(FILE* fastaIn) {
