@@ -31,6 +31,11 @@ class SuffixArray {
    * @returns the pointer to the index of the first occurrence
    */
   const int* search(const char* pattern, int length, int* numOfSolutions);
+
+  const int* iterativeSearch(const char* pattern, int length, int startLen,
+                             int* numOfSolutions, const int solUpperLimit,
+                             const int solLowerLimit);
+
   void saveSuffixArray(FILE *out);
 
   uint32_t size();

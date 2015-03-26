@@ -13,38 +13,55 @@
 #include <vector>
 #include <stdint.h>
 
-class LCSk {
+struct triplet {
+  uint32_t first;
+  uint32_t second;
+  uint32_t third;
 
-public:
-	/**
-	 * Method that is used for calculation of LCSk between two given strings with already
-	 * filled vector of positions of every common substring of length k in those two strings.
-	 *
-	 * @param k parameter k of LCSk
-	 * @result vector for keeping reconstruction of LCSk. It contains pairs of integers that
-	 * correspond with positions in strings.
-	 * @elements vector filled with pairs (i, j) that represent starting positions of common substrings
-	 * of length k. i is starting position in first string, j starting position in second string
-	 * @return value of LCSk between two strings
-	 */
-	static uint32_t calcLCSk(uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >* result,
-			std::vector<std::pair<uint32_t, uint32_t> >& elements);
+  triplet(uint32_t first, uint32_t second, uint32_t third)
+      : first(first),
+        second(second),
+        third(third) {
 
-	/**
-	 * Method that is used for calculation of LCSk++ between two given strings with already
-	 * filled vector of positions of every common substring of length k in those two strings.
-	 *
-	 * @param k parameter k of LCSk++
-	 * @result vector for keeping reconstruction of LCSk++. It contains pairs of integers that
-	 * correspond with positions in strings.
-	 * @elements vector filled with pairs (i, j) that represent starting positions of common substrings
-	 * of length k. i is starting position in first string, j starting position in second string
-	 * @return value of LCSk++ between two strings
-	 */
-	static uint32_t calcLCSkpp(uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >* result,
-			std::vector<std::pair<uint32_t, uint32_t> >& elements);
-
+  }
 };
 
+class LCSk {
+
+ public:
+  /**
+   * Method that is used for calculation of LCSk between two given strings with already
+   * filled vector of positions of every common substring of length k in those two strings.
+   *
+   * @param k parameter k of LCSk
+   * @result vector for keeping reconstruction of LCSk. It contains pairs of integers that
+   * correspond with positions in strings.
+   * @elements vector filled with pairs (i, j) that represent starting positions of common substrings
+   * of length k. i is starting position in first string, j starting position in second string
+   * @return value of LCSk between two strings
+   */
+  static uint32_t calcLCSk(
+      uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >* result,
+      std::vector<std::pair<uint32_t, uint32_t> >& elements);
+
+  /**
+   * Method that is used for calculation of LCSk++ between two given strings with already
+   * filled vector of positions of every common substring of length k in those two strings.
+   *
+   * @param k parameter k of LCSk++
+   * @result vector for keeping reconstruction of LCSk++. It contains pairs of integers that
+   * correspond with positions in strings.
+   * @elements vector filled with pairs (i, j) that represent starting positions of common substrings
+   * of length k. i is starting position in first string, j starting position in second string
+   * @return value of LCSk++ between two strings
+   */
+  static uint32_t calcLCSkpp(
+      uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >* result,
+      std::vector<std::pair<uint32_t, uint32_t> >& elements);
+
+  static uint32_t calcLCSpp(std::vector<std::pair<uint32_t, uint32_t> >* result,
+                            std::vector<triplet>& elements);
+
+};
 
 #endif /* SRC_LCSK_H_ */

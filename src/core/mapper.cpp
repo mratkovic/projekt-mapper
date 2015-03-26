@@ -89,7 +89,9 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
     edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_EXTENDED,
                           &cigar);
 
+
     score = read->dataLen() - score;
+    start = startLocations[0] + start;
     read->addMapping((*it)->score(), start, end, (*it)->isComplement(), cigar,
                      strlen(cigar));
     free(cigar);
@@ -116,27 +118,28 @@ void Mapper::fillMappings(Read* read, SuffixArray* sa) {
   bool containsN = false;
   uint32_t indexOfN;
 
+  char N = read->basesInt() ? baseToInt('N') : 'N';
+
 // test first K bp for N
-  for (uint32_t i = 0; i < KMER_K; ++i) {
-    // TODO prominit u numerical N
-    if (read->data()[i] == 'N') {
+/*  for (uint32_t i = 0; i < KMER_K; ++i) {
+    if (read->data()[i] == N) {
       containsN = true;
       indexOfN = i;
     }
-  }
+  }*/
 
-// skip kmers with N base
+  // skip kmers with N base
   for (uint32_t i = KMER_K; i < read->dataLen(); ++i) {
-    if (read->data()[i] == 'N') {
+   /* if (read->data()[i] == N) {
       containsN = true;
       indexOfN = i;
-    }
+    }*/
 
-    if (!containsN) {
+   // if (!containsN) {
       getKmerPositions(read, sa, pos, i - KMER_K);
-    } else if (indexOfN < i - KMER_K) {
-      containsN = false;
-    }
+    //} else if (indexOfN < i - KMER_K) {
+      //containsN = false;
+    //}
   }
 
   std::sort(pos.begin(), pos.end());
@@ -155,7 +158,6 @@ void Mapper::fillMappings(Read* read, SuffixArray* sa) {
       ;
     }
 
-    //runLIS(startIndex, endIndex, pos, read);
     runLCSk(startIndex, endIndex, pos, read);
 
     uint32_t lastPosition = pos[startIndex].first;
@@ -197,21 +199,17 @@ void Mapper::runLCSk(int startIndex, int endIndex,
 
   // TODO Provjera koliko kmera se nalazi izmedu start i end
   // te ukoliko je manje od mog minimuma preskoci
-//	if(endIndex - startIndex < read->dataLen() / 2) {
-//		return;
-//	}
 
   for (int i = startIndex; i < endIndex; ++i) {
     lcsKData.push_back(pos[i]);
   }
 
   std::vector<std::pair<uint32_t, uint32_t> > result;
-  uint32_t score = LCSk::calcLCSk(KMER_K, &result, lcsKData);
+  uint32_t score = LCSk::calcLCSkpp(KMER_K, &result, lcsKData);
 
   //result contains pairs (refPos, readPos)
   int32_t beginPos = result[0].first - result[0].second;
   beginPos = std::max(beginPos, 0);
-
   read->addMapping(score, beginPos, beginPos + read->dataLen(), false, NULL, 0);
 }
 
@@ -229,7 +227,7 @@ void copyFromTmpToFile(char* tmpFileName, FILE* src, FILE *dest) {
 void fillSAMHeader(FILE* out, Sequence* seq) {
   fprintf(out, "@HD\tVN:1.4\tSQ:unsorted\n");
 
-  for (int i = 0; i < seq->numOfSequences(); ++i) {
+  for (uint32_t i = 0; i < seq->numOfSequences(); ++i) {
     fprintf(out, "@SQ\tSN:%s\tLN:%u\n", seq->info(i), seq->seqLen(i));
   }
   fprintf(out, "@PG\tID:mapper\tPN:mapper\n");
@@ -259,7 +257,6 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath,
     tmpOutput[i] = fopen(tmpFilesNames[i], "w");
   }
   printf("Tmp files created\n");
-  //int cntr = 0;
 
 #pragma omp parallel
   {
@@ -273,14 +270,10 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath,
         {
           mapReadToSuffixArray(read, sa, generateCIGAR);
           read->printReadSAM(tmpOutput[omp_get_thread_num()], seq);
-          //Validator::validateWGSIM(read);
           delete read;
         }
 
         singleRead = new Read();
-//				if (++cntr % 10000 == 0) {
-//					printf("--%d\n", cntr++);
-//				}
       }
     }
 #pragma omp barrier

@@ -45,6 +45,43 @@ const int *SuffixArray::search(const char* pattern, int length,
   }
 }
 
+const int* SuffixArray::iterativeSearch(const char* pattern, int length,
+                                        int startLen, int* numOfSolutions,
+                                        const int solUpperLimit,
+                                        const int solLowerLimit) {
+  int firstIndex = -1;
+  int prevFirstIndex;
+
+  int prevNumOfSolutions;
+  *numOfSolutions = -1;
+
+  int currentLen = startLen;
+
+  do {
+    prevNumOfSolutions = *numOfSolutions;
+    prevFirstIndex = firstIndex;
+
+    *numOfSolutions = sa_search((const sauchar_t *) text_, textLen_,
+                                (const sauchar_t *) pattern, currentLen,
+                                &suffix_array_[0], textLen_, &firstIndex);
+
+    currentLen++;
+
+  } while (*numOfSolutions > solUpperLimit && currentLen <= length);
+
+  if (*numOfSolutions < solLowerLimit) {
+    *numOfSolutions = prevNumOfSolutions;
+    firstIndex = prevFirstIndex;
+  }
+
+  if (*numOfSolutions == -1) {
+    return numOfSolutions;
+  } else {
+    return &suffix_array_[firstIndex];
+  }
+
+}
+
 void SuffixArray::saveSuffixArray(FILE* out) {
   fwrite(&textLen_, sizeof(textLen_), 1, out);
   fwrite(&suffix_array_[0], sizeof(std::vector<saidx_t>::value_type),

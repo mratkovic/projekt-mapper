@@ -35,6 +35,37 @@ bool operator<(const Event &a, const Event &b) {
   return a.isStart < b.isStart;
 }
 
+struct Event3 {
+  uint32_t first;
+  uint32_t second;
+  uint32_t k;
+  bool isStart;  // start or end;
+  uint32_t index;
+  Event3(uint32_t first, uint32_t second, uint32_t k, bool isStart,
+         uint32_t index)
+      : first(first),
+        second(second),
+        k(k),
+        isStart(isStart),
+        index(index) {
+  }
+
+};
+
+bool operator<(const Event3 &a, const Event3 &b) {
+  if (a.first != b.first)
+    return a.first < b.first;
+
+  if (a.second != b.second)
+    return a.second < b.second;
+
+  return a.isStart < b.isStart;
+}
+
+bool operator<(const triplet &a, const triplet &b) {
+  return a.first < b.first;
+}
+
 void reconstructLCSk(
     std::vector<std::pair<uint32_t, uint32_t> >& elements, uint32_t k,
     std::vector<int>& prevIndex, int lastIndex, int lcskLen,
@@ -241,5 +272,49 @@ uint32_t LCSk::calcLCSkpp(
 
   reconstructLCSkpp(elements, k, recon, bestIndex, lcskppLen, result);
   return lcskppLen;
+}
+
+void reconstructLCSpp(
+    std::vector<triplet>& elements, std::vector<int>& prevIndex, int lastIndex,
+    int lcskLen, std::vector<std::pair<uint32_t, uint32_t> >* reconstruction) {
+
+  reconstruction->clear();
+  reconstruction->reserve(lcskLen);
+
+  int index = lastIndex;
+  while (index != -1) {
+
+    int k = elements[index].third;
+    int refEndIndex = elements[index].first + k - 1;
+    int readEndIndex = elements[index].second + k - 1;
+
+    int prev = prevIndex[index];
+    int prevK = elements[prev].third;
+
+    uint32_t howManyElements;
+
+    bool takeWhole = prev == -1;
+    if (elements[prev].first + prevK <= elements[index].first
+        && elements[prev].second + prevK <= elements[index].second) {
+      takeWhole = true;
+    }
+
+    if (takeWhole) {
+      howManyElements = k;
+    } else {
+      int curr_secondary_diag = (elements[index].first + elements[index].second)
+          / 2;
+      int prev_secondary_diag = (elements[prev].first + elements[prev].second)
+          / 2;
+      howManyElements = curr_secondary_diag - prev_secondary_diag;
+    }
+    for (uint32_t j = 0; j < howManyElements; ++j) {
+      reconstruction->push_back(
+          std::make_pair(refEndIndex - j, readEndIndex - j));
+    }
+    index = prevIndex[index];
+  }
+
+  std::reverse(reconstruction->begin(), reconstruction->end());
 }
 

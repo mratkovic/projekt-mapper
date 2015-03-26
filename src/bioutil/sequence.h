@@ -34,6 +34,8 @@ class Sequence {
   uint32_t numOfSequences();
   uint32_t seqLen(uint32_t index);
 
+  bool basesInt();
+
  private:
   char* data_;
   uint32_t dataLen_;

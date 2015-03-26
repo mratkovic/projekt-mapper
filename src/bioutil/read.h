@@ -54,6 +54,7 @@ class Read {
   std::multiset<Mapping*, ptr_compare<Mapping> >& mappings();
   Mapping* bestMapping(uint32_t index);
   uint32_t mappingsSize();
+  bool basesInt();
 
  private:
   char* id_;

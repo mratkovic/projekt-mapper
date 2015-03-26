@@ -144,8 +144,6 @@ void Sequence::allBasesToLetters() {
 }
 
 uint32_t Sequence::sequenceIndex(uint32_t positionGlobal) {
-  // binary search
-
   uint32_t lo, hi, mid;
   lo = 0;
   hi = numOfSequences_ - 1;
