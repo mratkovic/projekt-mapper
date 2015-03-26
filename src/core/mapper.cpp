@@ -60,8 +60,8 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
   read->mappings().clear();
 
   for (it = tmp_set.rbegin(); it != tmp_set.rend(); ++it) {
-    int32_t start = std::max<uint32_t>(0, (*it)->start() - 25);
-    uint32_t end = std::min<uint32_t>(sa->size(), (*it)->end() + 25);
+    int32_t start = std::max<uint32_t>(0, (*it)->start() - 10);
+    uint32_t end = std::min<uint32_t>(sa->size(), (*it)->end() + 10);
 
     int score, numLocations, alignmentLength;
     int* startLocations;
@@ -88,7 +88,6 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
     char* cigar;
     edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_EXTENDED,
                           &cigar);
-
 
     score = read->dataLen() - score;
     start = startLocations[0] + start;
@@ -118,28 +117,8 @@ void Mapper::fillMappings(Read* read, SuffixArray* sa) {
   bool containsN = false;
   uint32_t indexOfN;
 
-  char N = read->basesInt() ? baseToInt('N') : 'N';
-
-// test first K bp for N
-/*  for (uint32_t i = 0; i < KMER_K; ++i) {
-    if (read->data()[i] == N) {
-      containsN = true;
-      indexOfN = i;
-    }
-  }*/
-
-  // skip kmers with N base
   for (uint32_t i = KMER_K; i < read->dataLen(); ++i) {
-   /* if (read->data()[i] == N) {
-      containsN = true;
-      indexOfN = i;
-    }*/
-
-   // if (!containsN) {
-      getKmerPositions(read, sa, pos, i - KMER_K);
-    //} else if (indexOfN < i - KMER_K) {
-      //containsN = false;
-    //}
+    getKmerPositions(read, sa, pos, i - KMER_K);
   }
 
   std::sort(pos.begin(), pos.end());
@@ -199,6 +178,7 @@ void Mapper::runLCSk(int startIndex, int endIndex,
 
   // TODO Provjera koliko kmera se nalazi izmedu start i end
   // te ukoliko je manje od mog minimuma preskoci
+  // ovisno o kvaliteti readova
 
   for (int i = startIndex; i < endIndex; ++i) {
     lcsKData.push_back(pos[i]);
@@ -257,7 +237,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath,
     tmpOutput[i] = fopen(tmpFilesNames[i], "w");
   }
   printf("Tmp files created\n");
-
+  return;
 #pragma omp parallel
   {
 #pragma omp single

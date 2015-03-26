@@ -169,5 +169,16 @@ void Read::printReadSAM(FILE* outFile, Sequence* seq) {
             best->isComplement() ? 16 : 0, seq->info(seqIndex), start + 1,
             (uint32_t) best->score(), best->cigar(), '*', 0, 0, data_,
             quality_);
+  } else {
+    //TODO
+
+    allBasesToLetters();
+
+    uint32_t seqIndex = 0;
+    uint32_t start = 0;
+
+    fprintf(outFile, "%s\t%d\t%s\t%d\t%d\t%s\t%c\t%d\t%d\t%s\t%s\n", id_, 0,
+            seq->info(seqIndex), start + 1, (uint32_t) 0, data_, '*', 0, 0,
+            data_, quality_);
   }
 }

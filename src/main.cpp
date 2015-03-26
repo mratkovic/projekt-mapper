@@ -146,14 +146,14 @@ void mapReads(char* fastaInPath, char* saFile, char* readsInPath, char* outputFi
 
 	FILE* saIn = fopen(saFile, "rb");
 	printf("Reading suffix array from file\n");
-	SuffixArray *sa = new SuffixArray(saIn, seq->data(), seq->dataLen());
+	//SuffixArray *sa = new SuffixArray(saIn, seq->data(), seq->dataLen());
 	printf("SuffixArray read\n");
 	fclose(saIn);
 
 	printf("Mapping reads to sequence\n");
-	Mapper::mapAllReads(readsInPath, outputFilePath, sa, seq, true);
+	//Mapper::mapAllReads(readsInPath, outputFilePath, sa, seq, true);
 
-	delete sa;
+	//delete sa;
 	delete seq;
 
 }

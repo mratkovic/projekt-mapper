@@ -34,10 +34,9 @@ void Sequence::clear() {
   }
 
   for (auto it = info_.begin(); it != info_.end(); ++it) {
-    delete *it;
+    delete[] (*it);
   }
   info_.clear();
-
   dataLen_ = 0;
 }
 
@@ -58,9 +57,12 @@ uint32_t Sequence::numOfSequences() {
 
 void Sequence::readSequencesFromFASTA(FILE* fastaIn) {
   clear();
+  //fpos_t begin;
+  //fgetpos(fastaIn, &begin);
 
-  fpos_t begin;
-  fgetpos(fastaIn, &begin);
+  std::vector<char*> dataParts;
+  std::vector<uint32_t> dataLens;
+
   kseq_t *seq = kseq_init(fileno(fastaIn));
 
   dataLen_ = 0;
@@ -74,8 +76,12 @@ void Sequence::readSequencesFromFASTA(FILE* fastaIn) {
     info_.push_back(info);
 
     uint32_t dataLen = seq->seq.l;
-    char* data = new char[dataLen];
-    memcpy(data, seq->seq.s, dataLen);
+    char* data = seq->seq.s;
+    seq->seq.s = NULL;
+
+//    memcpy(data, seq->seq.s, dataLen);
+    dataParts.push_back(data);
+    dataLens.push_back(dataLen);
 
     ++numOfSequences_;
 
@@ -86,21 +92,36 @@ void Sequence::readSequencesFromFASTA(FILE* fastaIn) {
 
   assert(seqEndIndex_.size() == info_.size());
   assert(seqEndIndex_.size() == numOfSequences_);
-  data_ = new char[dataLen_];
-
   kseq_destroy(seq);
-
-  fsetpos(fastaIn, &begin);
-  seq = kseq_init(fileno(fastaIn));
+//
+//  fsetpos(fastaIn, &begin);
+//
+//  seq = kseq_init(fileno(fastaIn));
+//
+//  uint32_t currentSize = 0;
+//  while (kseq_read(seq) >= 0) {
+//    uint32_t dataLen = seq->seq.l;
+//    memcpy(data_ + currentSize, seq->seq.s, dataLen);
+//    currentSize += dataLen;
+//  }
+//  kseq_destroy(seq);
 
   uint32_t currentSize = 0;
-  while (kseq_read(seq) >= 0) {
-    uint32_t dataLen = seq->seq.l;
-    memcpy(data_ + currentSize, seq->seq.s, dataLen);
 
-    currentSize += dataLen;
-  }
-  kseq_destroy(seq);
+//  if (dataParts.size() == 1) {
+//    // already allocated
+//    data_ = *dataParts.begin();
+//
+//  } else {
+//    data_ = new char[dataLen_];
+//    for (uint32_t i = 0; i < dataParts.size(); ++i) {
+//      memcpy(data_ + currentSize, dataParts[i], dataLens[i]);
+//      currentSize += dataLens[i];
+//
+//      delete[] dataParts[i];
+//    }
+//  }
+
 }
 
 void Sequence::readSingleSequenceFromFASTA(FILE* fastaIn) {
