@@ -17,8 +17,10 @@
 #include "../bioutil/sequence.h"
 #include "../util/fenwick.h"
 
-#define KMER_K 20
+#define KMER_K 15
 #define WINDOW_SIZE 2
+#define SW_START_OFFSET 25
+#define SW_END_OFFSET 25
 
 // TODO trenutno bzvz stoji samo
 #define MAX_NUMBER_OF_KMER_POSITIONS 1000000

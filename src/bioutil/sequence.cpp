@@ -69,24 +69,23 @@ void Sequence::readSequencesFromFASTA(FILE* fastaIn) {
   numOfSequences_ = 0;
 
   while (kseq_read(seq) >= 0) {
-    uint32_t size = seq->name.l + 1;
-    char* info = new char[size];
-    memcpy(info, seq->name.s, seq->name.l);
-    info[seq->name.l] = 0;
+
+    char* info = seq->name.s;
     info_.push_back(info);
 
     uint32_t dataLen = seq->seq.l;
     char* data = seq->seq.s;
-    seq->seq.s = NULL;
-
-//    memcpy(data, seq->seq.s, dataLen);
     dataParts.push_back(data);
     dataLens.push_back(dataLen);
 
-    ++numOfSequences_;
+    seq->name.m = 0;
+    seq->name.s = NULL;
+    seq->seq.m = 0;
+    seq->seq.s = NULL;
 
     dataLen_ += dataLen;
     seqEndIndex_.push_back(dataLen_);
+    ++numOfSequences_;
 
   }
 
@@ -108,19 +107,19 @@ void Sequence::readSequencesFromFASTA(FILE* fastaIn) {
 
   uint32_t currentSize = 0;
 
-//  if (dataParts.size() == 1) {
-//    // already allocated
-//    data_ = *dataParts.begin();
-//
-//  } else {
-//    data_ = new char[dataLen_];
-//    for (uint32_t i = 0; i < dataParts.size(); ++i) {
-//      memcpy(data_ + currentSize, dataParts[i], dataLens[i]);
-//      currentSize += dataLens[i];
-//
-//      delete[] dataParts[i];
-//    }
-//  }
+  if (dataParts.size() == 1) {
+    // already allocated
+    data_ = *dataParts.begin();
+
+  } else {
+    data_ = new char[dataLen_];
+    for (uint32_t i = 0; i < dataParts.size(); ++i) {
+      memcpy(data_ + currentSize, dataParts[i], dataLens[i]);
+      currentSize += dataLens[i];
+
+      delete[] dataParts[i];
+    }
+  }
 
 }
 

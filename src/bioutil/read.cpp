@@ -105,18 +105,17 @@ bool Read::readNextFromFASTQ(kseq_t* seq) {
   }
 
   uint32_t size = seq->name.l + 1;
-  id_ = new char[size];
-  memcpy(id_, seq->name.s, seq->name.l);
-  id_[size - 1] = 0;
-
+  id_ = seq->name.s;
+  data_ = seq->seq.s;
   dataLen_ = seq->seq.l;
-  data_ = new char[dataLen_ + 1];
-  memcpy(data_, seq->seq.s, dataLen_);
-  data_[dataLen_] = 0;
+  quality_ = seq->qual.s;
 
-  quality_ = new char[dataLen_ + 1];
-  memcpy(quality_, seq->qual.s, dataLen_);
-  quality_[dataLen_] = 0;
+  seq->name.s = NULL;
+  seq->name.m = 0;
+  seq->seq.s = NULL;
+  seq->seq.m = 0;
+  seq->qual.s = NULL;
+  seq->qual.m = 0;
 
   return true;
 }

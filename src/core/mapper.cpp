@@ -60,8 +60,8 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
   read->mappings().clear();
 
   for (it = tmp_set.rbegin(); it != tmp_set.rend(); ++it) {
-    int32_t start = std::max<uint32_t>(0, (*it)->start() - 10);
-    uint32_t end = std::min<uint32_t>(sa->size(), (*it)->end() + 10);
+    int32_t start = std::max<uint32_t>(0, (*it)->start() - SW_START_OFFSET);
+    uint32_t end = std::min<uint32_t>(sa->size(), (*it)->end() + SW_END_OFFSET);
 
     int score, numLocations, alignmentLength;
     int* startLocations;
@@ -113,9 +113,6 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
 void Mapper::fillMappings(Read* read, SuffixArray* sa) {
   std::vector<std::pair<uint32_t, uint32_t> > pos;
   assert(read->dataLen() >= KMER_K);
-
-  bool containsN = false;
-  uint32_t indexOfN;
 
   for (uint32_t i = KMER_K; i < read->dataLen(); ++i) {
     getKmerPositions(read, sa, pos, i - KMER_K);
@@ -237,7 +234,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath,
     tmpOutput[i] = fopen(tmpFilesNames[i], "w");
   }
   printf("Tmp files created\n");
-  return;
+
 #pragma omp parallel
   {
 #pragma omp single
