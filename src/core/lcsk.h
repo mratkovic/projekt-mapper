@@ -13,6 +13,7 @@
 #include <vector>
 #include <stdint.h>
 
+
 struct triplet {
   uint32_t first;
   uint32_t second;
@@ -41,7 +42,7 @@ class LCSk {
    * @return value of LCSk between two strings
    */
   static uint32_t calcLCSk(
-      uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >* result,
+      uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >& result,
       std::vector<std::pair<uint32_t, uint32_t> >& elements);
 
   /**
@@ -56,11 +57,19 @@ class LCSk {
    * @return value of LCSk++ between two strings
    */
   static uint32_t calcLCSkpp(
-      uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >* result,
+      uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >& result,
       std::vector<std::pair<uint32_t, uint32_t> >& elements);
 
-  static uint32_t calcLCSpp(std::vector<std::pair<uint32_t, uint32_t> >* result,
+  static uint32_t calcLCSpp(std::vector<std::pair<uint32_t, uint32_t> >& result,
                             std::vector<triplet>& elements);
+
+  // nepomaze za velik postotak greske
+  static uint32_t estimateBeginingPosFromLCSk(
+      std::vector<std::pair<uint32_t, uint32_t> >& reconstruction);
+
+  static uint32_t calcLCSkppSlow(
+      uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >& result,
+            std::vector<std::pair<uint32_t, uint32_t> >& elements);
 
 };
 

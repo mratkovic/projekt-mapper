@@ -7,7 +7,6 @@
 
 #include <algorithm>
 
-#include "../external/ssw_cpp.h"
 #include "../external/kseq.h"
 #include "../external/edlib.h"
 #include "../bioutil/bioutil.h"
@@ -28,7 +27,7 @@ void Mapper::getKmerPositions(
   const int* matches = sa->search(read->data() + kmerStart, KMER_K,
                                   &numOfSolutions);
 
-  if (*matches == -1 || numOfSolutions > MAX_NUMBER_OF_KMER_POSITIONS) {
+  if (*matches == -1) {
     return;
   }
 
@@ -72,7 +71,7 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
       edlibCalcEditDistance((const unsigned char *) reverse_complement->data(),
                             reverse_complement->dataLen(),
                             (const unsigned char *) (sa->text() + start),
-                            end - start, 5, -1, EDLIB_MODE_HW, true, true,
+                            end - start + 1, 5, -1, EDLIB_MODE_HW, true, true,
                             &score, &endLocations, &startLocations,
                             &numLocations, &alignment, &alignmentLength);
 
@@ -80,7 +79,7 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
       edlibCalcEditDistance((const unsigned char *) read->data(),
                             read->dataLen(),
                             (const unsigned char *) (sa->text() + start),
-                            end - start, 5, -1, EDLIB_MODE_HW, true, true,
+                            end - start + 1, 5, -1, EDLIB_MODE_HW, true, true,
                             &score, &endLocations, &startLocations,
                             &numLocations, &alignment, &alignmentLength);
     }
@@ -91,7 +90,9 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
 
     score = read->dataLen() - score;
     start = startLocations[0] + start;
-    read->addMapping((*it)->score(), start, end, (*it)->isComplement(), cigar,
+    end = endLocations[0] + start;
+
+    read->addMapping(score, start, end, (*it)->isComplement(), cigar,
                      strlen(cigar));
     free(cigar);
     if (endLocations) {
@@ -182,7 +183,7 @@ void Mapper::runLCSk(int startIndex, int endIndex,
   }
 
   std::vector<std::pair<uint32_t, uint32_t> > result;
-  uint32_t score = LCSk::calcLCSkpp(KMER_K, &result, lcsKData);
+  uint32_t score = LCSk::calcLCSkpp(KMER_K, result, lcsKData);
 
   //result contains pairs (refPos, readPos)
   int32_t beginPos = result[0].first - result[0].second;
@@ -220,7 +221,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath,
   Read* singleRead = new Read;
 
   int threadNum = omp_get_num_procs();
-  //threadNum = 1;
+  // threadNum = 1;
 
   omp_set_dynamic(0);
   omp_set_num_threads(threadNum);
@@ -239,6 +240,9 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath,
   {
 #pragma omp single
     {
+
+      uint32_t cntr = 0;
+
       while (singleRead->readNextFromFASTQ(kseq)) {
         Read* read = singleRead;
 
@@ -249,6 +253,11 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath,
           read->printReadSAM(tmpOutput[omp_get_thread_num()], seq);
           delete read;
         }
+
+        if (cntr % 500 == 0) {
+          printf("-%d-\n", cntr);
+        }
+        ++cntr;
 
         singleRead = new Read();
       }

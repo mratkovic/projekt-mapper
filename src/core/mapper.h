@@ -19,18 +19,9 @@
 
 #define KMER_K 15
 #define WINDOW_SIZE 2
-#define SW_START_OFFSET 25
-#define SW_END_OFFSET 25
 
-// TODO trenutno bzvz stoji samo
-#define MAX_NUMBER_OF_KMER_POSITIONS 1000000
-
-#define SSW_MATCH 3
-#define SSW_MISMATCH 1
-#define SSW_GAP_OPEN 3
-#define SSW_GAP_EXTEND 2
-
-#define MAX_EDIT_DIST_FACTOR 0.1l
+#define SW_START_OFFSET 20
+#define SW_END_OFFSET 20
 
 using namespace bioutil;
 
