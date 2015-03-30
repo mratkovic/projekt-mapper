@@ -13,6 +13,8 @@
 #include <vector>
 #include <stdint.h>
 
+#define E 5
+#define N -1
 
 struct triplet {
   uint32_t first;
@@ -69,8 +71,14 @@ class LCSk {
 
   static uint32_t calcLCSkppSlow(
       uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >& result,
-            std::vector<std::pair<uint32_t, uint32_t> >& elements);
+      std::vector<std::pair<uint32_t, uint32_t> >& elements);
 
+//  static uint32_t calcLCSkppPenalty(
+//      uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >& result,
+//      std::vector<std::pair<uint32_t, uint32_t> >& elements);
+
+  static uint32_t getScoreFromRecon(
+      uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >& reconstruction);
 };
 
 #endif /* SRC_LCSK_H_ */

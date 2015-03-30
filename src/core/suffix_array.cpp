@@ -19,6 +19,7 @@ SuffixArray::SuffixArray(FILE* in, const char* text, size_t textLen) {
   uint32_t len;
   suffix_array_.clear();
   fread(&len, sizeof(len), 1, in);
+  printf("%d -- %d\n", len, textLen);
   assert(len == textLen);
 
   text_ = text;

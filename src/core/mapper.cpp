@@ -59,7 +59,7 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
   read->mappings().clear();
 
   for (it = tmp_set.rbegin(); it != tmp_set.rend(); ++it) {
-    int32_t start = std::max<uint32_t>(0, (*it)->start() - SW_START_OFFSET);
+    int32_t start = std::max<int32_t>(0, (*it)->start() - SW_START_OFFSET);
     uint32_t end = std::min<uint32_t>(sa->size(), (*it)->end() + SW_END_OFFSET);
 
     int score, numLocations, alignmentLength;
@@ -172,7 +172,7 @@ void Mapper::runLIS(int startIndex, int endIndex,
 void Mapper::runLCSk(int startIndex, int endIndex,
                      std::vector<std::pair<uint32_t, uint32_t> > &pos,
                      Read* read) {
-  std::vector<std::pair<uint32_t, uint32_t> > lcsKData;
+  std::vector<std::pair<uint32_t, uint32_t> > lcsKData(endIndex - startIndex);
 
   // TODO Provjera koliko kmera se nalazi izmedu start i end
   // te ukoliko je manje od mog minimuma preskoci
@@ -184,9 +184,11 @@ void Mapper::runLCSk(int startIndex, int endIndex,
 
   std::vector<std::pair<uint32_t, uint32_t> > result;
   uint32_t score = LCSk::calcLCSkpp(KMER_K, result, lcsKData);
+ // score = LCSk::getScoreFromRecon(KMER_K, result);
 
   //result contains pairs (refPos, readPos)
   int32_t beginPos = result[0].first - result[0].second;
+
   beginPos = std::max(beginPos, 0);
   read->addMapping(score, beginPos, beginPos + read->dataLen(), false, NULL, 0);
 }
@@ -221,7 +223,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath,
   Read* singleRead = new Read;
 
   int threadNum = omp_get_num_procs();
-  // threadNum = 1;
+  //threadNum = 1;
 
   omp_set_dynamic(0);
   omp_set_num_threads(threadNum);

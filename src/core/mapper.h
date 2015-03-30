@@ -17,7 +17,7 @@
 #include "../bioutil/sequence.h"
 #include "../util/fenwick.h"
 
-#define KMER_K 15
+#define KMER_K 10
 #define WINDOW_SIZE 2
 
 #define SW_START_OFFSET 20
