@@ -49,30 +49,31 @@ const int *SuffixArray::search(const char* pattern, int length,
 const int* SuffixArray::iterativeSearch(const char* pattern, int length,
                                         int startLen, int* numOfSolutions,
                                         const int solUpperLimit,
-                                        const int solLowerLimit) {
+                                        const int solLowerLimit,
+                                        int* finalLen) {
   int firstIndex = -1;
   int prevFirstIndex;
 
   int prevNumOfSolutions;
   *numOfSolutions = -1;
 
-  int currentLen = startLen;
+  int currentLen = startLen - 1;
 
   do {
+    currentLen++;
     prevNumOfSolutions = *numOfSolutions;
     prevFirstIndex = firstIndex;
-
     *numOfSolutions = sa_search((const sauchar_t *) text_, textLen_,
                                 (const sauchar_t *) pattern, currentLen,
                                 &suffix_array_[0], textLen_, &firstIndex);
 
-    currentLen++;
-
   } while (*numOfSolutions > solUpperLimit && currentLen <= length);
 
-  if (*numOfSolutions < solLowerLimit) {
+  *finalLen = currentLen;
+  if (*numOfSolutions < solLowerLimit && prevNumOfSolutions != -1) {
     *numOfSolutions = prevNumOfSolutions;
     firstIndex = prevFirstIndex;
+    *finalLen = currentLen - 1;
   }
 
   if (*numOfSolutions == -1) {

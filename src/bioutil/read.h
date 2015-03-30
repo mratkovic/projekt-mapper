@@ -17,7 +17,6 @@
 #include "../core/suffix_array.h"
 #include "../core/mapping.h"
 
-
 KSEQ_INIT(int, read)
 
 template<typename T, typename Pred = std::less<T> >
@@ -48,8 +47,8 @@ class Read {
   const char* id();
   uint32_t dataLen();
 
-  void addMapping(double score, uint32_t start, uint32_t end, bool isComplement,
-                  const char* cigar, uint32_t cigarLen);
+  void addMapping(uint32_t score, uint32_t start, uint32_t end,
+                  bool isComplement, const char* cigar, uint32_t cigarLen);
 
   std::multiset<Mapping*, ptr_compare<Mapping> >& mappings();
   Mapping* bestMapping(uint32_t index);

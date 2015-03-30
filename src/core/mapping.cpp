@@ -13,7 +13,7 @@ Mapping::Mapping() {
   complement_ = false;
   cigar_ = 0;
 }
-Mapping::Mapping(double score, uint32_t start, uint32_t end, bool complement,
+Mapping::Mapping(uint32_t score, uint32_t start, uint32_t end, bool complement,
                  const char* cigarStr, uint32_t cigarLen)
     : score_(score),
       start_(start),
@@ -30,7 +30,7 @@ void Mapping::setComplement(bool complemented) {
   complement_ = complemented;
 }
 
-double Mapping::score() const {
+uint32_t Mapping::score() const {
   return score_;
 }
 

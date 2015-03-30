@@ -6,15 +6,13 @@
  */
 
 #include <algorithm>
-
 #include "../external/kseq.h"
 #include "../external/edlib.h"
 #include "../bioutil/bioutil.h"
 #include "mapper.h"
 #include "mapping.h"
 #include "lis.h"
-#include "lcsk.h"
-
+//#include "lcsk.h"
 #include "../util/utility_functions.h"
 
 using namespace bioutil;
@@ -30,17 +28,35 @@ void Mapper::getKmerPositions(
   if (*matches == -1) {
     return;
   }
-
   for (int i = 0; i < numOfSolutions; ++i) {
     positions.push_back(std::make_pair(matches[i], kmerStart));
   }
 }
+
+void Mapper::getKmerPositions3(Read* read, SuffixArray* sa,
+                               std::vector<Triplet> &positions, int kmerStart) {
+
+  int numOfSolutions;
+  int len;
+  const int* matches = sa->iterativeSearch(read->data() + kmerStart,
+                                           read->dataLen() - kmerStart - 1,
+                                           KMER_K,
+                                           &numOfSolutions, 15, 2, &len);
+
+  if (*matches == -1) {
+    return;
+  }
+  for (int i = 0; i < numOfSolutions; ++i) {
+    positions.push_back(Triplet(matches[i], kmerStart, len));
+  }
+}
+
 void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
                                   bool generateCIGAR) {
   read->allBasesToSmallInt();
   Read* reverse_complement = read->getReverseComplement();
-  fillMappings(read, sa);
-  fillMappings(reverse_complement, sa);
+  fillMappings3(read, sa);
+  fillMappings3(reverse_complement, sa);
 
   std::multiset<Mapping*, ptr_compare<Mapping> >::reverse_iterator it =
       reverse_complement->mappings().rbegin();
@@ -111,6 +127,75 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
 
 }
 
+void Mapper::runLCSk3(int startIndex, int endIndex, std::vector<Triplet> &pos,
+                      Read* read) {
+  std::vector<Triplet> lcsKData;
+
+  // TODO Provjera koliko kmera se nalazi izmedu start i end
+  // te ukoliko je manje od mog minimuma preskoci
+  // ovisno o kvaliteti readova
+
+  for (int i = startIndex; i < endIndex; ++i) {
+    lcsKData.push_back(pos[i]);
+  }
+
+  std::vector<std::pair<uint32_t, uint32_t> > result;
+  uint32_t score = LCSk::calcLCSpp(result, lcsKData);
+
+  //result contains pairs (refPos, readPos)
+  int len = result.size();
+  int32_t beginPos = result[0].first - result[0].second;
+  int32_t endPos = beginPos + read->dataLen() * 5l;
+
+  if (len > 2) {
+    endPos = std::min<int32_t>(endPos, result[len - 1].first);
+  }
+
+  beginPos = std::max(beginPos, 0);
+  read->addMapping(score, beginPos, endPos, false, NULL, 0);
+}
+
+void Mapper::fillMappings3(Read* read, SuffixArray* sa) {
+  std::vector<Triplet> pos;
+  assert(read->dataLen() >= KMER_K);
+
+  for (uint32_t i = KMER_K; i < read->dataLen(); ++i) {
+    getKmerPositions3(read, sa, pos, i - KMER_K);
+  }
+
+  std::sort(pos.begin(), pos.end());
+  if (pos.size() == 0) {
+    return;
+  }
+
+  uint32_t startIndex = 0;
+  uint32_t endIndex = 0;
+  while (true) {
+
+    // prozor dug max WINDOW SIZE * duzina reada
+    uint32_t windowEnd = pos[startIndex].first + WINDOW_SIZE * read->dataLen();
+    for (; endIndex < pos.size() && pos[endIndex].first < windowEnd;
+        ++endIndex) {
+      ;
+    }
+
+    runLCSk3(startIndex, endIndex, pos, read);
+
+    uint32_t lastPosition = pos[startIndex].first;
+    // pomakni pocetak prozora za duljinu reada od proslog pocetka
+    for (;
+        startIndex < pos.size()
+            && pos[startIndex].first < lastPosition + read->dataLen();
+        ++startIndex) {
+      ;
+    }
+    if (startIndex >= pos.size()) {
+      break;
+    }
+
+  }
+}
+
 void Mapper::fillMappings(Read* read, SuffixArray* sa) {
   std::vector<std::pair<uint32_t, uint32_t> > pos;
   assert(read->dataLen() >= KMER_K);
@@ -172,7 +257,7 @@ void Mapper::runLIS(int startIndex, int endIndex,
 void Mapper::runLCSk(int startIndex, int endIndex,
                      std::vector<std::pair<uint32_t, uint32_t> > &pos,
                      Read* read) {
-  std::vector<std::pair<uint32_t, uint32_t> > lcsKData(endIndex - startIndex);
+  std::vector<std::pair<uint32_t, uint32_t> > lcsKData;
 
   // TODO Provjera koliko kmera se nalazi izmedu start i end
   // te ukoliko je manje od mog minimuma preskoci
@@ -184,13 +269,14 @@ void Mapper::runLCSk(int startIndex, int endIndex,
 
   std::vector<std::pair<uint32_t, uint32_t> > result;
   uint32_t score = LCSk::calcLCSkpp(KMER_K, result, lcsKData);
- // score = LCSk::getScoreFromRecon(KMER_K, result);
 
   //result contains pairs (refPos, readPos)
   int32_t beginPos = result[0].first - result[0].second;
 
   beginPos = std::max(beginPos, 0);
-  read->addMapping(score, beginPos, beginPos + read->dataLen(), false, NULL, 0);
+  read->addMapping(result.size(), beginPos, beginPos + read->dataLen(), false,
+  NULL,
+                   0);
 }
 
 void copyFromTmpToFile(char* tmpFileName, FILE* src, FILE *dest) {
@@ -223,7 +309,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath,
   Read* singleRead = new Read;
 
   int threadNum = omp_get_num_procs();
-  //threadNum = 1;
+  // threadNum = 1;
 
   omp_set_dynamic(0);
   omp_set_num_threads(threadNum);
@@ -256,7 +342,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath,
           delete read;
         }
 
-        if (cntr % 500 == 0) {
+        if (cntr % 250 == 0) {
           printf("-%d-\n", cntr);
         }
         ++cntr;

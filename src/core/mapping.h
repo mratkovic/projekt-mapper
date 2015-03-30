@@ -13,13 +13,15 @@
 class Mapping {
  public:
   Mapping();
-  Mapping(double score, uint32_t start, uint32_t end, bool complemented,
+  Mapping(uint32_t score, uint32_t start, uint32_t end, bool complemented,
           const char* cigar, uint32_t cigarLen);
   virtual ~Mapping();
 
   bool isComplement();
 
-  double score() const;
+  uint32_t score() const;
+
+  uint32_t penalty() const;
 
   uint32_t end();
   uint32_t start();
@@ -32,10 +34,11 @@ class Mapping {
   void setComplement(bool complemented);
   bool operator <(const Mapping &other) const {
     return score_ <= other.score();
+
   }
 
  private:
-  double score_;
+  uint32_t score_;
   uint32_t start_;
   uint32_t end_;
   bool complement_;

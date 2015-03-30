@@ -12,22 +12,10 @@
 
 #include <vector>
 #include <stdint.h>
+#include "../util/triplet.h"
 
-#define E 5
+#define E 10
 #define N -1
-
-struct triplet {
-  uint32_t first;
-  uint32_t second;
-  uint32_t third;
-
-  triplet(uint32_t first, uint32_t second, uint32_t third)
-      : first(first),
-        second(second),
-        third(third) {
-
-  }
-};
 
 class LCSk {
 
@@ -63,7 +51,7 @@ class LCSk {
       std::vector<std::pair<uint32_t, uint32_t> >& elements);
 
   static uint32_t calcLCSpp(std::vector<std::pair<uint32_t, uint32_t> >& result,
-                            std::vector<triplet>& elements);
+                            std::vector<Triplet>& elements);
 
   // nepomaze za velik postotak greske
   static uint32_t estimateBeginingPosFromLCSk(
@@ -73,9 +61,9 @@ class LCSk {
       uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >& result,
       std::vector<std::pair<uint32_t, uint32_t> >& elements);
 
-//  static uint32_t calcLCSkppPenalty(
-//      uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >& result,
-//      std::vector<std::pair<uint32_t, uint32_t> >& elements);
+  static uint32_t calcLCSkppPenalty(
+      uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >& result,
+      std::vector<std::pair<uint32_t, uint32_t> >& elements);
 
   static uint32_t getScoreFromRecon(
       uint32_t k, std::vector<std::pair<uint32_t, uint32_t> >& reconstruction);

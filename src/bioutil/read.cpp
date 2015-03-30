@@ -22,14 +22,16 @@ Read::~Read() {
   clear();
 }
 
-void Read::addMapping(double score, uint32_t start, uint32_t end,
+void Read::addMapping(uint32_t score, uint32_t start, uint32_t end,
                       bool isComplement, const char* cigar, uint32_t cigarLen) {
-  Mapping* m = new Mapping(score, start, end, isComplement, cigar, cigarLen);
-  mappings_.insert(m);
 
+  Mapping* m = new Mapping(score, start, end, isComplement, cigar, cigarLen);
+
+  mappings_.insert(m);
   while (mappings_.size() > 1
-      && ((*mappings_.rbegin())->score() / (*mappings_.begin())->score()
-          > KEEP_FACTOR)) {
+      && (((double) (*mappings_.rbegin())->score()
+          / (*mappings_.begin())->score()) > KEEP_FACTOR)) {
+
     delete *mappings_.begin();
     mappings_.erase(mappings_.begin());
   }
@@ -158,6 +160,7 @@ Read* Read::getReverseComplement() {
 }
 void Read::printReadSAM(FILE* outFile, Sequence* seq) {
   Mapping* best = bestMapping(0);
+
   if (best != NULL) {
     allBasesToLetters();
 
@@ -169,15 +172,6 @@ void Read::printReadSAM(FILE* outFile, Sequence* seq) {
             (uint32_t) best->score(), best->cigar(), '*', 0, 0, data_,
             quality_);
   } else {
-    //TODO
-
-    allBasesToLetters();
-
-    uint32_t seqIndex = 0;
-    uint32_t start = 0;
-
-    fprintf(outFile, "%s\t%d\t%s\t%d\t%d\t%s\t%c\t%d\t%d\t%s\t%s\n", id_, 0,
-            seq->info(seqIndex), start + 1, (uint32_t) 0, data_, '*', 0, 0,
-            data_, quality_);
+    // TODO: nije mapiran
   }
 }

@@ -8,6 +8,7 @@
 #include <dirent.h>
 #include <unistd.h>
 
+
 inline bool validateOutputFile(char*filePath) {
   printf("W %s\n", filePath);
   FILE* f = fopen(filePath, "w");

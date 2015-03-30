@@ -34,7 +34,7 @@ class SuffixArray {
 
   const int* iterativeSearch(const char* pattern, int length, int startLen,
                              int* numOfSolutions, const int solUpperLimit,
-                             const int solLowerLimit);
+                             const int solLowerLimit, int* finalLen);
 
   void saveSuffixArray(FILE *out);
 
