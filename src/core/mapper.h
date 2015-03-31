@@ -18,11 +18,15 @@
 #include "../util/fenwick.h"
 #include "../util/triplet.h"
 #include "lcsk.h"
+
 #define KMER_K 10
 #define WINDOW_SIZE 2
 
 #define SW_START_OFFSET 25
 #define SW_END_OFFSET 25
+
+#define MAX_MATCH_NUM 15
+#define MIN_MATCH_NUM 5
 
 using namespace bioutil;
 

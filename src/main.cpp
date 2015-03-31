@@ -74,7 +74,7 @@ void validate(char* referenceFilePath, char* testFilePath);
  * @return exit status
  */
 int main(int argc, char **argv) {
-	if (argc != 4 && argc != 6) {
+if (argc != 4 && argc != 6) {
 		displayInvalidCallMsg();
 	}
 
@@ -157,6 +157,7 @@ void mapReads(char* fastaInPath, char* saFile, char* readsInPath, char* outputFi
 	printf("Mapping reads to sequence\n");
 	Mapper::mapAllReads(readsInPath, outputFilePath, sa, seq, true);
 
+	printf("\nComplete\n");
 	delete sa;
 	delete seq;
 

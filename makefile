@@ -40,7 +40,7 @@ BIOUTIL_CPP_FILES := $(wildcard $(BIOUTIL_DIR)/*.cpp)
 BIOUTIL_OBJ_FILES := $(addprefix $(BIOUTIL_OBJ_DIR),$(notdir $(BIOUTIL_CPP_FILES:.cpp=.o)))
 
 CXX := g++
-CXXFLAGS := -g -Wall -O2 -std=c++11 -Wno-unused-function  $(INCLUDES) -fopenmp -w
+CXXFLAGS := -g -Wall -O2 -std=c++11 -Wno-unused-function -fopenmp
 
 CC := $(CXX)
 CC_FLAGS := $(CXXFLAGS)

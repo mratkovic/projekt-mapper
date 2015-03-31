@@ -550,7 +550,6 @@ uint32_t LCSk::calcLCSpp(std::vector<std::pair<uint32_t, uint32_t> >& result,
   vector<int> continues(elements.size(), -1);
 
   // find pairs continuing each other
-
   vector<Triplet>::iterator it;
   vector<Triplet>::iterator prevIt;
 

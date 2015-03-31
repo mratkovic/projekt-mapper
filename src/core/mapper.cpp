@@ -12,7 +12,6 @@
 #include "mapper.h"
 #include "mapping.h"
 #include "lis.h"
-//#include "lcsk.h"
 #include "../util/utility_functions.h"
 
 using namespace bioutil;
@@ -41,7 +40,9 @@ void Mapper::getKmerPositions3(Read* read, SuffixArray* sa,
   const int* matches = sa->iterativeSearch(read->data() + kmerStart,
                                            read->dataLen() - kmerStart - 1,
                                            KMER_K,
-                                           &numOfSolutions, 15, 2, &len);
+                                           &numOfSolutions, MAX_MATCH_NUM,
+                                           MIN_MATCH_NUM,
+                                           &len);
 
   if (*matches == -1) {
     return;
@@ -76,9 +77,10 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
 
   for (it = tmp_set.rbegin(); it != tmp_set.rend(); ++it) {
     int32_t start = std::max<int32_t>(0, (*it)->start() - SW_START_OFFSET);
-    uint32_t end = std::min<uint32_t>(sa->size(), (*it)->end() + SW_END_OFFSET);
+    uint32_t end = std::min<uint32_t>(sa->size() - 1,
+                                      (*it)->end() + SW_END_OFFSET);
 
-    int score, numLocations, alignmentLength;
+    int bla, score, numLocations, alignmentLength;
     int* startLocations;
     int* endLocations;
     unsigned char* alignment;
@@ -104,11 +106,11 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
     edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_EXTENDED,
                           &cigar);
 
-    score = read->dataLen() - score;
+    int newScore = read->dataLen() - score;
     start = startLocations[0] + start;
     end = endLocations[0] + start;
 
-    read->addMapping(score, start, end, (*it)->isComplement(), cigar,
+    read->addMapping(newScore, start, end, (*it)->isComplement(), cigar,
                      strlen(cigar));
     free(cigar);
     if (endLocations) {
@@ -145,7 +147,7 @@ void Mapper::runLCSk3(int startIndex, int endIndex, std::vector<Triplet> &pos,
   //result contains pairs (refPos, readPos)
   int len = result.size();
   int32_t beginPos = result[0].first - result[0].second;
-  int32_t endPos = beginPos + read->dataLen() * 5l;
+  int32_t endPos = beginPos + read->dataLen() * 2l;
 
   if (len > 2) {
     endPos = std::min<int32_t>(endPos, result[len - 1].first);
@@ -272,6 +274,12 @@ void Mapper::runLCSk(int startIndex, int endIndex,
 
   //result contains pairs (refPos, readPos)
   int32_t beginPos = result[0].first - result[0].second;
+  int32_t endPos = beginPos + read->dataLen() * 2l;
+
+  int len = result.size();
+  if (len > 2) {
+    endPos = std::min<int32_t>(endPos, result[len - 1].first);
+  }
 
   beginPos = std::max(beginPos, 0);
   read->addMapping(result.size(), beginPos, beginPos + read->dataLen(), false,
@@ -309,7 +317,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath,
   Read* singleRead = new Read;
 
   int threadNum = omp_get_num_procs();
-  // threadNum = 1;
+  threadNum = 3;
 
   omp_set_dynamic(0);
   omp_set_num_threads(threadNum);
@@ -346,7 +354,6 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath,
           printf("-%d-\n", cntr);
         }
         ++cntr;
-
         singleRead = new Read();
       }
     }

@@ -18,11 +18,7 @@ class Mapping {
   virtual ~Mapping();
 
   bool isComplement();
-
   uint32_t score() const;
-
-  uint32_t penalty() const;
-
   uint32_t end();
   uint32_t start();
 
