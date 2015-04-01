@@ -10,7 +10,7 @@
 #include <cstdio>
 #include <map>
 
-#include "../util/fenwick.h"
+#include "util/fenwick.h"
 
 using namespace std;
 

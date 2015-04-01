@@ -80,7 +80,7 @@ void Mapper::mapReadToSuffixArray(Read* read, SuffixArray* sa,
     uint32_t end = std::min<uint32_t>(sa->size() - 1,
                                       (*it)->end() + SW_END_OFFSET);
 
-    int bla, score, numLocations, alignmentLength;
+    int score, numLocations, alignmentLength;
     int* startLocations;
     int* endLocations;
     unsigned char* alignment;
@@ -317,7 +317,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath,
   Read* singleRead = new Read;
 
   int threadNum = omp_get_num_procs();
-  threadNum = 3;
+  //threadNum = 3;
 
   omp_set_dynamic(0);
   omp_set_num_threads(threadNum);
