@@ -19,7 +19,6 @@ class Fenwick {
  public:
   /**
    * Constructor.
-   *
    * @param n number of elements or positions
    */
   Fenwick(int n) {
@@ -30,7 +29,6 @@ class Fenwick {
 
   /**
    * Function that calculates value of lowest significant bit in given value
-   *
    * @param a value
    * @return lowest significant bit of a
    */
@@ -40,7 +38,6 @@ class Fenwick {
 
   /**
    * Method that inserts value val at position pos and updates data structure with new maximum element.
-   *
    * @param pos position on wich the value in inserted
    * @param val value that is inserted in data structure
    */
@@ -52,7 +49,6 @@ class Fenwick {
   }
   /**
    * Method that returns maximum value stored in data structure in position range of [0, pos].
-   *
    * @param pos upper bound of range
    * @return maximum element in given range
    */

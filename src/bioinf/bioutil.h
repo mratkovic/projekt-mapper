@@ -15,8 +15,10 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdint>
+#include <climits>
 #include <map>
 
+namespace bioinf {
 /**
  * Function tests if base passed as argument is valid.
  * Valid bases are A, C, G, T and N.
@@ -25,8 +27,8 @@
  * @return true if base is valid, false otherwise
  */
 static inline bool isValidBaseACGT(char base) {
-	base = toupper(base);
-	return base == 'A' || base == 'C' || base == 'G' || base == 'T' || base == 'N';
+  base = toupper(base);
+  return base == 'A' || base == 'C' || base == 'G' || base == 'T' || base == 'N';
 
 }
 
@@ -42,20 +44,20 @@ static inline bool isValidBaseACGT(char base) {
  * @return number assigned to base
  */
 static inline uint8_t baseToInt(char base) {
-	base = toupper(base);
+  base = toupper(base);
 
-	if (base == 'A')
-		return 0;
-	if (base == 'C')
-		return 1;
-	if (base == 'G')
-		return 2;
-	if (base == 'T')
-		return 3;
-	if (base == 'N')
-		return 4;
+  if (base == 'A')
+    return 0;
+  if (base == 'C')
+    return 1;
+  if (base == 'G')
+    return 2;
+  if (base == 'T')
+    return 3;
+  if (base == 'N')
+    return 4;
 
-	return UINT8_MAX;
+  return UCHAR_MAX;
 
 }
 /**
@@ -70,20 +72,20 @@ static inline uint8_t baseToInt(char base) {
  * @return number assigned to base
  */
 inline char intToBase(const uint8_t num) {
-	if (num == 0)
-		return 'A';
-	if (num == 1)
-		return 'C';
-	if (num == 2)
-		return 'G';
-	if (num == 3)
-		return 'T';
+  if (num == 0)
+    return 'A';
+  if (num == 1)
+    return 'C';
+  if (num == 2)
+    return 'G';
+  if (num == 3)
+    return 'T';
 
-	if (num == 4)
-		return 'N';
+  if (num == 4)
+    return 'N';
 
-	// should never happen
-	return 0;
+  // should never happen
+  return 0;
 }
 /**
  * Function that calculates complement of given base.
@@ -93,19 +95,19 @@ inline char intToBase(const uint8_t num) {
  * @return complement of given base
  */
 inline char getACGTComplement(char base) {
-	base = toupper(base);
-	assert(isValidBaseACGT(base));
+  base = toupper(base);
+  assert(isValidBaseACGT(base));
 
-	if (base == 'A')
-		return 'T';
-	else if (base == 'T')
-		return 'A';
-	else if (base == 'C')
-		return 'G';
-	else if (base == 'G')
-		return 'C';
-	else
-		return 'N';
+  if (base == 'A')
+    return 'T';
+  else if (base == 'T')
+    return 'A';
+  else if (base == 'C')
+    return 'G';
+  else if (base == 'G')
+    return 'C';
+  else
+    return 'N';
 
 }
 
@@ -117,22 +119,24 @@ inline char getACGTComplement(char base) {
  * @return complement of given base also as small int
  */
 inline uint8_t getACGTComplementAsSmallInt(uint8_t base) {
-	// A to T
-	if (base == 0)
-		return 3;
-	else if (base == 3)
-		return 0;
+  // A to T
+  if (base == 0)
+    return 3;
+  else if (base == 3)
+    return 0;
 
-	// C to G
-	else if (base == 1)
-		return 2;
-	else if (base == 2)
-		return 1;
+  // C to G
+  else if (base == 1)
+    return 2;
+  else if (base == 2)
+    return 1;
 
-	// N
-	else
-		return 4;
+  // N
+  else
+    return 4;
 
 }
+
+}  // end namespace
 
 #endif /* UTIL_H_ */

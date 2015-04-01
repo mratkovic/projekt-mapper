@@ -1,6 +1,13 @@
 /*
  * main.cpp
  *
+ *  Created on: Mar 23, 2015
+ *      Author: marko
+ */
+
+/*
+ * main.cpp
+ *
  *  Created on: Dec 12, 2014
  *      Author: marko
  * File contains main function of program that maps short reads to reference gene.
@@ -23,21 +30,19 @@
 #include <algorithm>
 #include <omp.h>
 
-#include "bioutil/bioutil.h"
 #include "core/mapper.h"
 #include "core/suffix_array.h"
-#include "bioutil/read.h"
-#include "bioutil/sequence.h"
+#include "bioinf/sequence.h"
 #include "util/utility_functions.h"
-#include "validator.h"
+#include "core/incremental_lcsk_solver.h"
 
-using namespace bioutil;
+using namespace bioinf;
 
 /**
  * Function that displays valid command line arguments in case of wrong
  * program start and exits program with status -1.
  */
-void displayInvalidCallMsg();
+void verboseUsageAndExit();
 /**
  * Method that constructs suffix array from FASTA file and stores
  * suffix array to binary file on given position.
@@ -56,16 +61,8 @@ void constructSA(char* fastaInPath, char* saOutputPath);
  * @param outputFilePath path to output file for storing mapping information.
  *
  */
-void mapReads(char* fastaInPath, char* saFile, char* readsInPath, char* outputFilePath);
-
-/**
- * Method that validates SAM output file. Validation is done by comparison between
- * test SAM file and reference SAM file.
- *
- * @param referenceFilePath path to SAM file containing valid information.
- * @param testFilePath path to SAM file containing data that needs to be tested
- */
-void validate(char* referenceFilePath, char* testFilePath);
+void mapReads(char* fastaInPath, char* saFile, char* readsInPath,
+              char* outputFilePath, uint32_t threadNum);
 
 /**
  * Main method. Entry point of this project.
@@ -74,102 +71,94 @@ void validate(char* referenceFilePath, char* testFilePath);
  * @return exit status
  */
 int main(int argc, char **argv) {
-if (argc != 4 && argc != 6) {
-		displayInvalidCallMsg();
-	}
+  if (argc != 4 && argc != 6) {
+    verboseUsageAndExit();
+  }
 
-	if (!strcmp(argv[1], "construct") && argc == 4) {
-		constructSA(argv[2], argv[3]);
+  if (!strcmp(argv[1], "index") && argc == 4) {
+    constructSA(argv[2], argv[3]);
 
-	} else if (!strcmp(argv[1], "map") && argc == 6) {
-		mapReads(argv[2], argv[3], argv[4], argv[5]);
+  } else if (!strcmp(argv[1], "map") && argc == 6) {
+    mapReads(argv[2], argv[3], argv[4], argv[5], omp_get_num_procs() / 2);  //TODO
 
-	} else if (!strcmp(argv[1], "validate") && argc == 4) {
-		validate(argv[2], argv[3]);
-	} else {
-		displayInvalidCallMsg();
-	}
+  } else {
+    verboseUsageAndExit();
+  }
 
-	printf("\nEXIT 0\n");
-	return 0;
+  printf("\nEXIT 0\n");
+  return 0;
 }
 
-void displayInvalidCallMsg() {
-	printf("Invalid call\n");
-	printf("mapper construct <fastaFile> <suffixArrayOutputFile>\n");
-	printf("mapper map <fastaFile> <suffixArrayOutputFile> <reads> <resultOutputFile>\n");
-	printf("mapper validate <referenceSAMfile> <testSAMfile>\n");
-	exit(-1);
+void verboseUsageAndExit() {
+  printf("Invalid call\n");
+  printf("mapper index <fastaFile> <suffixArrayOutputFile>\n");
+  printf(
+      "mapper map <fastaFile> <suffixArrayOutputFile> <reads> <resultOutputFile>\n");
+  exit(-1);
 }
 
 void constructSA(char* fastaInPath, char* saOutputPath) {
-	assert(validateInputFile(fastaInPath));
-	assert(validateOutputFile(saOutputPath));
+  assert(validateInputFile(fastaInPath));
+  assert(validateOutputFile(saOutputPath));
 
-	FILE* fastaIn = fopen(fastaInPath, "r");
-	Sequence *seq = new Sequence;
-	printf("Reading sequence file %s\n", fastaInPath);
-	seq->readSequencesFromFASTA(fastaIn);
-	printf("Number of sequences: %lu\n", (unsigned long) seq->numOfSequences());
+  FILE* fastaIn = fopen(fastaInPath, "r");
+  Sequence *seq = new Sequence;
 
-	for(uint32_t i = 0; i < seq->numOfSequences(); ++i) {
-	  printf("\t%d: %s: [%d]\n", i, seq->info(i), seq->seqLen(i));
-	}
-	fclose(fastaIn);
+  fprintf(stderr, "Reading sequence file %s\n", fastaInPath);
+  seq->readSequencesFromFASTA(fastaIn);
+  fprintf(stderr, "Number of sequences: %lu\n",
+          (unsigned long) seq->numOfSequences());
 
-	printf("Constructing suffix array started\n");
-	SuffixArray *sa = new SuffixArray(seq->data(), seq->dataLen());
+  for (uint32_t i = 0; i < seq->numOfSequences(); ++i) {
+    fprintf(stderr, "\t%d: %s: [%d]\n", i, seq->info(i), seq->seqLen(i));
+  }
+  fclose(fastaIn);
 
-	printf("Constructing suffix array completed\n");
-	printf("Size of array: %d\n", sa->size());
+  fprintf(stderr, "Constructing suffix array started\n");
+  SuffixArray *sa = new SuffixArray(seq->data(), seq->dataLen());
+  fprintf(stderr, "Constructing suffix array completed\n");
+  fprintf(stderr, "Size of array: %d\n", sa->size());
 
-	FILE* saOut = fopen(saOutputPath, "wb");
-	printf("Saving suffix array to %s\n", saOutputPath);
-	sa->saveSuffixArray(saOut);
-	printf("Completed\n");
+  FILE* saOut = fopen(saOutputPath, "wb");
+  fprintf(stderr, "Saving suffix array to %s\n", saOutputPath);
+  sa->saveSuffixArray(saOut);
+  fprintf(stderr, "Completed\n");
 
-	delete sa;
-	delete seq;
-	fclose(saOut);
+  delete sa;
+  delete seq;
+  fclose(saOut);
 }
 
-void mapReads(char* fastaInPath, char* saFile, char* readsInPath, char* outputFilePath) {
-	assert(validateInputFile(fastaInPath));
-	assert(validateInputFile(saFile));
-	assert(validateInputFile(readsInPath));
-	assert(validateOutputFile(outputFilePath));
+void mapReads(char* fastaInPath, char* saFile, char* readsInPath,
+              char* outputFilePath, uint32_t threadNum) {
 
-	FILE* fastaIn = fopen(fastaInPath, "r");
-	Sequence *seq = new Sequence;
-	printf("Reading sequence file %s\n", fastaInPath);
-	seq->readSequencesFromFASTA(fastaIn);
-	seq->allBasesToSmallInt();
-	fclose(fastaIn);
+  assert(validateInputFile(fastaInPath));
+  assert(validateInputFile(saFile));
+  assert(validateInputFile(readsInPath));
+  assert(validateOutputFile(outputFilePath));
 
+  FILE* fastaIn = fopen(fastaInPath, "r");
+  Sequence *seq = new Sequence;
+  fprintf(stderr, "Reading sequence file %s\n", fastaInPath);
+  seq->readSequencesFromFASTA(fastaIn);
+  seq->allBasesToSmallInt();
+  fclose(fastaIn);
 
+  IncrementalLCSkSolver* solver = new IncrementalLCSkSolver(seq);
+  solver->kmerK_ = 8;
+  solver->maxMatchNum_ = 18;
+  solver->minMatchNum_ = 10;
 
-	FILE* saIn = fopen(saFile, "rb");
-	printf("Reading suffix array from file\n");
-	SuffixArray *sa = new SuffixArray(saIn, seq->data(), seq->dataLen());
-	printf("SuffixArray read\n");
-	fclose(saIn);
+  solver->readSuffixArrayFromFile(saFile);
+  Mapper* mapper = new Mapper(seq, solver, 4);
+  printf("Mapping reads to sequence\n");
+  mapper->mapAllReads(readsInPath, outputFilePath);
 
-	printf("Mapping reads to sequence\n");
-	Mapper::mapAllReads(readsInPath, outputFilePath, sa, seq, true);
+  printf("\nComplete\n");
 
-	printf("\nComplete\n");
-	delete sa;
-	delete seq;
+  delete mapper;
+  delete solver;
+  delete seq;
 
-}
-
-void validate(char* referenceFilePath, char* testFilePath) {
-	assert(validateInputFile(referenceFilePath));
-	assert(validateInputFile(testFilePath));
-
-	FILE* refFile = fopen(referenceFilePath, "r");
-	FILE* testFile = fopen(testFilePath, "r");
-
-	Validator::validateSAM(refFile, testFile);
 }
 

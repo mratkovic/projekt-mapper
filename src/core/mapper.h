@@ -13,52 +13,36 @@
 
 #include "suffix_array.h"
 
-#include "../bioutil/read.h"
-#include "../bioutil/sequence.h"
-#include "../util/fenwick.h"
-#include "../util/triplet.h"
-#include "lcsk.h"
+#include "bioinf/read.h"
+#include "bioinf/sequence.h"
+#include "solver.h"
 
-#define KMER_K 10
-#define WINDOW_SIZE 2
-
-#define SW_START_OFFSET 25
-#define SW_END_OFFSET 25
-
-#define MAX_MATCH_NUM 15
-#define MIN_MATCH_NUM 5
-
-using namespace bioutil;
+#define MAX_TMP_NAME_LEN 50
+using namespace bioinf;
 
 class Mapper {
 
+ public:
+
+  Mapper(Sequence* seq, Solver* solver, uint32_t threadNum = omp_get_num_procs());
+  void mapAllReads(char* readsInPath, char* solutionOutPath);
+
  private:
+  // TODO REMOVE OR REFACTOR
   static void runLIS(int startIndex, int endIndex,
                      std::vector<std::pair<uint32_t, uint32_t> > &pos,
                      Read* read);
-  static void runLCSk(int startIndex, int endIndex,
-                      std::vector<std::pair<uint32_t, uint32_t> > &pos,
-                      Read* read);
 
-  static void mapReadToSuffixArray(Read* read, SuffixArray* sa,
-                                   bool generateCIGAR);
-  static void getKmerPositions(
-      Read* read, SuffixArray* sa,
-      std::vector<std::pair<uint32_t, uint32_t> > &positions, int kmerStart);
-  static void fillMappings(Read* read, SuffixArray* sa);
-  static void getPositions(Read* read, SuffixArray* sa, bool complement);
+  void fillSAMHeader(FILE* out);
 
- public:
-  static void mapAllReads(char* readsInPath, char* solutionOutPath,
-                          SuffixArray* sa, Sequence* seq, bool generateCIGAR);
+  void copyFromTmpFileAndDelete(char* tmpFileName, FILE* src, FILE *dest);
+  void createTmpFiles(FILE* tempFiles[], char tmpFileNames[][MAX_TMP_NAME_LEN],
+                      uint32_t numOfFiles);
+  void mergeTmpFiles(char fileNames[][MAX_TMP_NAME_LEN], FILE* tmpFiles[],
+                     FILE* solutionFile, int numberOfFiles);
 
-  static void getKmerPositions3(Read* read, SuffixArray* sa,
-                                std::vector<Triplet> &positions, int kmerStart);
-//
-  static void fillMappings3(Read* read, SuffixArray* sa);
-
-  static void runLCSk3(int startIndex, int endIndex, std::vector<Triplet> &pos,
-                       Read* read);
-
+  Sequence* seq_;
+  Solver* solver_;
+  uint32_t threadNum_;
 };
 #endif

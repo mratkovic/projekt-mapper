@@ -5,16 +5,17 @@
  *      Author: marko
  */
 
+#include <bioinf/position.h>
 #include <cstring>
-#include "mapping.h"
 
-Mapping::Mapping() {
+Position::Position() {
   score_ = start_ = end_ = 0;
   complement_ = false;
   cigar_ = 0;
 }
-Mapping::Mapping(uint32_t score, uint32_t start, uint32_t end, bool complement,
-                 const char* cigarStr, uint32_t cigarLen)
+
+Position::Position(uint32_t score, uint32_t start, uint32_t end,
+                   bool complement, const char* cigarStr, uint32_t cigarLen)
     : score_(score),
       start_(start),
       end_(end),
@@ -23,36 +24,36 @@ Mapping::Mapping(uint32_t score, uint32_t start, uint32_t end, bool complement,
   cigar(cigarStr, cigarLen);
 }
 
-bool Mapping::isComplement() {
+bool Position::isComplement() {
   return complement_;
 }
-void Mapping::setComplement(bool complemented) {
+void Position::setComplement(bool complemented) {
   complement_ = complemented;
 }
 
-uint32_t Mapping::score() const {
+uint32_t Position::score() const {
   return score_;
 }
 
-uint32_t Mapping::end() {
+uint32_t Position::end() {
   return end_;
 }
 
-uint32_t Mapping::start() {
+uint32_t Position::start() {
   return start_;
 }
 
-void Mapping::end(uint32_t end) {
+void Position::end(uint32_t end) {
   end_ = end;
 }
-void Mapping::start(uint32_t start) {
+void Position::start(uint32_t start) {
   start_ = start;
 }
 
-const char* Mapping::cigar() {
+const char* Position::cigar() {
   return cigar_;
 }
-void Mapping::cigar(const char* cigar, uint32_t len) {
+void Position::cigar(const char* cigar, uint32_t len) {
   if (cigar == NULL) {
     return;
   }
@@ -62,7 +63,7 @@ void Mapping::cigar(const char* cigar, uint32_t len) {
   cigar_[len] = 0;
 }
 
-Mapping::~Mapping() {
+Position::~Position() {
   if (cigar_) {
     delete[] cigar_;
     cigar_ = 0;

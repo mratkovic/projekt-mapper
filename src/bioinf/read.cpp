@@ -6,54 +6,56 @@
  */
 
 #include "read.h"
-#include "../util/utility_functions.h"
+#include "util/utility_functions.h"
+#include "bioutil.h"
 
 #define LINE_SIZE 30000
 #define KEEP_FACTOR 1l
 
-using namespace bioutil;
+namespace bioinf {
+
 Read::Read() {
   id_ = data_ = optional_identifier_ = quality_ = 0;
   dataLen_ = 0;
   basesAsInt_ = false;
-  //mapping_ = new Mapping;
 }
 Read::~Read() {
   clear();
 }
 
-void Read::addMapping(uint32_t score, uint32_t start, uint32_t end,
-                      bool isComplement, const char* cigar, uint32_t cigarLen) {
+void Read::addPosition(uint32_t score, uint32_t start, uint32_t end,
+                       bool isComplement, const char* cigar,
+                       uint32_t cigarLen) {
 
-  Mapping* m = new Mapping(score, start, end, isComplement, cigar, cigarLen);
+  Position* p = new Position(score, start, end, isComplement, cigar, cigarLen);
 
-  mappings_.insert(m);
-  while (mappings_.size() > 1
-      && (((double) (*mappings_.rbegin())->score()
-          / (*mappings_.begin())->score()) > KEEP_FACTOR)) {
+  positions_.insert(p);
+  while (positions_.size() > 1
+      && (((double) (*positions_.rbegin())->score()
+          / (*positions_.begin())->score()) > KEEP_FACTOR)) {
 
-    delete *mappings_.begin();
-    mappings_.erase(mappings_.begin());
+    delete *positions_.begin();
+    positions_.erase(positions_.begin());
   }
 }
 
-Mapping* Read::bestMapping(uint32_t index) {
-  std::multiset<Mapping*, ptr_compare<Mapping> >::reverse_iterator it =
-      mappings_.rbegin();
+Position* Read::bestPosition(uint32_t index) {
+  std::multiset<Position*, ptr_compare<Position> >::reverse_iterator it =
+      positions_.rbegin();
   uint32_t cntr = 0;
 
-  for (; it != mappings_.rend(); ++it, ++cntr) {
+  for (; it != positions_.rend(); ++it, ++cntr) {
     if (cntr == index) {
       return *it;
     }
   }
   return NULL;
 }
-std::multiset<Mapping*, ptr_compare<Mapping> >& Read::mappings() {
-  return mappings_;
+std::multiset<Position*, ptr_compare<Position> >& Read::positions() {
+  return positions_;
 }
-uint32_t Read::mappingsSize() {
-  return mappings_.size();
+uint32_t Read::positionsSize() {
+  return positions_.size();
 }
 
 const char* Read::data() {
@@ -89,11 +91,8 @@ void Read::clear() {
     quality_ = 0;
   }
 
-  std::multiset<Mapping*, ptr_compare<Mapping> >::iterator it =
-      mappings_.begin();
   uint32_t cntr = 0;
-
-  for (; it != mappings_.end(); ++it, ++cntr) {
+  for (auto it = positions_.begin(); it != positions_.end(); ++it, ++cntr) {
     delete *it;
   }
   dataLen_ = 0;
@@ -130,6 +129,7 @@ void Read::allBasesToSmallInt() {
   for (uint32_t i = 0; i < dataLen_; ++i) {
     data_[i] = baseToInt(data_[i]);
   }
+
   basesAsInt_ = true;
 }
 void Read::allBasesToLetters() {
@@ -159,8 +159,8 @@ Read* Read::getReverseComplement() {
 
 }
 void Read::printReadSAM(FILE* outFile, Sequence* seq) {
-  Mapping* best = bestMapping(0);
-
+  Position* best = bestPosition(0);
+  //printf("%d\n", positions_.size());
   if (best != NULL) {
     allBasesToLetters();
 
@@ -175,3 +175,4 @@ void Read::printReadSAM(FILE* outFile, Sequence* seq) {
     // TODO: nije mapiran
   }
 }
+}  // end namespace
