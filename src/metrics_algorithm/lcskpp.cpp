@@ -61,8 +61,7 @@ uint32_t LCSkpp::calcLCSkpp(uint32_t k,
   uint32_t lcskppLen = 0;
   uint32_t bestIndex = 0;
 
-  for (auto event = events.begin(); event != events.end();
-      ++event) {
+  for (auto event = events.begin(); event != events.end(); ++event) {
     int index = event->index;
 
     if (event->isStart) {
@@ -126,7 +125,7 @@ uint32_t LCSkpp::calcLCSkppSlow(
           && matches[j].second + k <= matches[i].second) {
         // 1) Uzimam cijeli match interval i nastavljam neki
         // match koji je ranije vec zavrsio.
-        if (dp[j] + k > dp[i]) {
+        if (dp[j] + (int) k > dp[i]) {
           dp[i] = dp[j] + k;
           recon[i] = j;
         }
@@ -138,7 +137,7 @@ uint32_t LCSkpp::calcLCSkppSlow(
         int secDiagJ = (rowEndJ + colEndJ) / 2;
 
         int extend = secDiagI - secDiagJ;
-        if (primDiagI == primDiagJ && secDiagI > secDiagJ && extend < k) {
+        if (primDiagI == primDiagJ && secDiagI > secDiagJ && extend < (int) k) {
           if (dp[j] + extend > dp[i]) {
             dp[i] = dp[j] + extend;
             recon[i] = j;

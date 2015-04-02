@@ -148,6 +148,7 @@ void LCSkSolver::findReadPosition(bioinf::Read* read) {
 
   std::multiset<Position*, ptr_compare<Position> > tmp_set = read->positions();
   read->positions().clear();
+ // printf("EDLIB: %d\n", tmp_set.size());
 
   for (it = tmp_set.rbegin(); it != tmp_set.rend(); ++it) {
     int32_t start = std::max<int32_t>(0, (*it)->start() - 0.5*read->dataLen());

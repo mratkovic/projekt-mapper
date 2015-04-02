@@ -7,8 +7,9 @@
 
 #include <algorithm>
 
-#include <metrics_algorithm/lcskppV2.h>
+#include "lcskppV2.h"
 #include "util/fenwick.h"
+#include <cassert>
 
 using namespace std;
 
@@ -19,8 +20,15 @@ bool operator<(const eventK_t &a, const eventK_t &b) {
   if (a.second != b.second)
     return a.second < b.second;
 
+  if (a.index != b.index)
+    return a.index < b.index;
+
+  if (a.k != b.k)
+    return a.k < b.k;
+
   return a.isStart < b.isStart;
 }
+
 bool operator==(const eventK_t &a, const eventK_t &b) {
 
   return a.first == b.first && a.second == b.second && (a.isStart == b.isStart);
@@ -107,15 +115,17 @@ uint32_t LCSkppV2::calcLCSkpp(
 
   reconstructLCSpp(elements, recon, bestIndex, lcskppLen, result);
   result.erase(unique(result.begin(), result.end()), result.end());
-  return lcskppLen;
+  //assert(result.size() == lcskppLen);
+  return result.size();
 }
 
-void LCSkppV2::reconstructLCSpp(vector<triplet_t<uint32_t>> &elements,
-                      vector<int> &prevIndex, int lastIndex, int lcskLen,
-                      vector<pair<uint32_t, uint32_t>> &reconstruction) {
+void LCSkppV2::reconstructLCSpp(
+    vector<triplet_t<uint32_t>> &elements, vector<int> &prevIndex,
+    int lastIndex, int lcskLen,
+    vector<pair<uint32_t, uint32_t>> &reconstruction) {
 
   reconstruction.clear();
-  reconstruction.reserve(lcskLen);
+  //reconstruction.reserve(lcskLen);
 
   int index = lastIndex;
   while (index != -1) {

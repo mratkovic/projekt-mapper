@@ -10,7 +10,8 @@
 #include "bioutil.h"
 
 #define LINE_SIZE 30000
-#define KEEP_FACTOR 1l
+#define KEEP_FACTOR 1.2f
+#define MAX_KEEP 120
 
 namespace bioinf {
 
@@ -31,8 +32,8 @@ void Read::addPosition(uint32_t score, uint32_t start, uint32_t end,
 
   positions_.insert(p);
   while (positions_.size() > 1
-      && (((double) (*positions_.rbegin())->score()
-          / (*positions_.begin())->score()) > KEEP_FACTOR)) {
+      && ((((double) (*positions_.rbegin())->score()
+          / (*positions_.begin())->score()) > KEEP_FACTOR) || positions_.size() > MAX_KEEP)) {
 
     delete *positions_.begin();
     positions_.erase(positions_.begin());

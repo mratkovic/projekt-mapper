@@ -126,7 +126,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath) {
           delete read;
         }
 
-        if (cntr % 250 == 0) {
+        if (cntr % 25 == 0) {
           fprintf(stderr, "-%d-\n", cntr);
         }
         ++cntr;

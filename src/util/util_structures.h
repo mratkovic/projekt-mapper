@@ -5,8 +5,8 @@
  *      Author: marko
  */
 
-#ifndef SRC_METRICS_ALGORITHM_UTIL_STRUCTURES_H_
-#define SRC_METRICS_ALGORITHM_UTIL_STRUCTURES_H_
+#ifndef SRC_UTIL_STRUCTURES_H_
+#define SRC_UTIL_STRUCTURES_H_
 
 struct event_t {
   uint32_t first;
@@ -36,10 +36,9 @@ struct event_t {
 struct eventK_t {
   uint32_t first;
   uint32_t second;
+  uint32_t k;
   bool isStart;
   uint32_t index;
-
-  uint32_t k;
 
   eventK_t(uint32_t first, uint32_t second, uint32_t k, bool isStart,
            uint32_t index)
@@ -76,4 +75,4 @@ inline bool operator<(const triplet_t<uint32_t> &a,
 
 }
 
-#endif /* SRC_METRICS_ALGORITHM_UTIL_STRUCTURES_H_ */
+#endif /* SRC_UTIL_STRUCTURES_H_ */

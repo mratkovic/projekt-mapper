@@ -35,6 +35,7 @@
 #include "bioinf/sequence.h"
 #include "util/utility_functions.h"
 #include "core/incremental_lcsk_solver.h"
+#include "core/lcsk_solver.h"
 
 using namespace bioinf;
 
@@ -145,9 +146,14 @@ void mapReads(char* fastaInPath, char* saFile, char* readsInPath,
   fclose(fastaIn);
 
   IncrementalLCSkSolver* solver = new IncrementalLCSkSolver(seq);
-  solver->kmerK_ = 8;
-  solver->maxMatchNum_ = 18;
-  solver->minMatchNum_ = 10;
+
+  solver->kmerK_ = 10;
+  solver->maxMatchNum_ = 80;
+  solver->minMatchNum_ = 15;
+
+//  LCSkSolver* slvr = new LCSkSolver(seq);
+//  slvr->kmerK_ = 10;
+//  //slvr->readSuffixArrayFromFile(saFile);
 
   solver->readSuffixArrayFromFile(saFile);
   Mapper* mapper = new Mapper(seq, solver, 4);
