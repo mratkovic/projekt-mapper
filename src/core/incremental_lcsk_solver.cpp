@@ -71,6 +71,9 @@ void IncrementalLCSkSolver::runLCSkpp(int startIndex, int endIndex,
   // te ukoliko je manje od mog minimuma preskoci
   // ovisno o kvaliteti readova
 
+
+  // MOZE BEZ OVOG?????, dam iterator i velicinu
+  // std::vector<int>::const_iterator a i to e to
   for (int i = startIndex; i < endIndex; ++i) {
     lcsKData.push_back(pos[i]);
   }

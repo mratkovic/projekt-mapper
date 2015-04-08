@@ -18,6 +18,7 @@
 #include "solver.h"
 
 #define MAX_TMP_NAME_LEN 50
+
 using namespace bioinf;
 
 class Mapper {

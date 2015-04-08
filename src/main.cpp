@@ -28,6 +28,7 @@
 #include <vector>
 #include <utility>
 #include <algorithm>
+#include <cstring>
 #include <omp.h>
 
 #include "core/mapper.h"
@@ -36,6 +37,8 @@
 #include "util/utility_functions.h"
 #include "core/incremental_lcsk_solver.h"
 #include "core/lcsk_solver.h"
+
+#define MODE_LEN 25
 
 using namespace bioinf;
 
@@ -62,8 +65,7 @@ void constructSA(char* fastaInPath, char* saOutputPath);
  * @param outputFilePath path to output file for storing mapping information.
  *
  */
-void mapReads(char* fastaInPath, char* saFile, char* readsInPath,
-              char* outputFilePath, uint32_t threadNum);
+void mapReads(int argc, char** argv);
 
 /**
  * Main method. Entry point of this project.
@@ -72,15 +74,23 @@ void mapReads(char* fastaInPath, char* saFile, char* readsInPath,
  * @return exit status
  */
 int main(int argc, char **argv) {
-  if (argc != 4 && argc != 6) {
-    verboseUsageAndExit();
+
+  int option;
+  char mode[MODE_LEN];
+  while ((option = getopt(argc, argv, "m:t:k:l:h:")) >= 0) {
+    switch (option) {
+      case 'm':
+        strncpy(mode, optarg, MODE_LEN);
+        break;
+    }
   }
 
-  if (!strcmp(argv[1], "index") && argc == 4) {
-    constructSA(argv[2], argv[3]);
+  if (!strcmp(mode, "index") && optind + 2 == argc) {
+    constructSA(argv[optind], argv[optind + 1]);
 
-  } else if (!strcmp(argv[1], "map") && argc == 6) {
-    mapReads(argv[2], argv[3], argv[4], argv[5], omp_get_num_procs() / 2);  //TODO
+  } else if (!strcmp(mode, "map") && optind + 4 == argc) {
+    optind = 0;
+    mapReads(argc, argv);
 
   } else {
     verboseUsageAndExit();
@@ -91,10 +101,26 @@ int main(int argc, char **argv) {
 }
 
 void verboseUsageAndExit() {
-  printf("Invalid call\n");
-  printf("mapper index <fastaFile> <suffixArrayOutputFile>\n");
-  printf(
-      "mapper map <fastaFile> <suffixArrayOutputFile> <reads> <resultOutputFile>\n");
+
+  fprintf(stderr, "\n");
+  fprintf(stderr,
+          "Usage - create index: mapper -m index <fastaFile> <suffixArrayOutputFile>\n");
+  fprintf(
+      stderr,
+      "Usage - map reads: mapper -m map [options...] <fastaFile> <suffixArrayOutputFile> <readsFASTQ> <resultOutputFile>\n");
+
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Options:\n");
+  fprintf(stderr,
+          "  -t N  N is thread number. [default: number of processors]\n");
+  fprintf(stderr, "  -k N  N is seed length. [default: 15]\n");
+  fprintf(
+      stderr,
+      "  -l lowerLimit  lowerLimit is minimum required number of hits. [default: / ]\n");
+  fprintf(
+      stderr,
+      "  -h upperLimit  upperLimit is maximum allowed number of hits. [default: / ]\n");
+
   exit(-1);
 }
 
@@ -130,12 +156,41 @@ void constructSA(char* fastaInPath, char* saOutputPath) {
   fclose(saOut);
 }
 
-void mapReads(char* fastaInPath, char* saFile, char* readsInPath,
-              char* outputFilePath, uint32_t threadNum) {
+void mapReads(int argc, char** argv) {
 
+  uint32_t k = KMER_K;
+  uint32_t l = MIN_MATCH_NUM;
+  uint32_t h = MAX_MATCH_NUM;
+  uint32_t t = omp_get_num_procs();
+
+  int option;
+  while ((option = getopt(argc, argv, "m:t:k:l:h:")) >= 0) {
+    switch (option) {
+      case 't':
+        t = atoi(optarg);
+        break;
+      case 'k':
+        k = atoi(optarg);
+        break;
+      case 'l':
+        l = atoi(optarg);
+        break;
+      case 'h':
+        h = atoi(optarg);
+        break;
+    }
+  }
+
+  char* fastaInPath = argv[optind];
   assert(validateInputFile(fastaInPath));
+
+  char* saFile = argv[optind + 1];
   assert(validateInputFile(saFile));
+
+  char* readsInPath = argv[optind + 2];
   assert(validateInputFile(readsInPath));
+
+  char* outputFilePath = argv[optind + 3];
   assert(validateOutputFile(outputFilePath));
 
   FILE* fastaIn = fopen(fastaInPath, "r");
@@ -147,20 +202,16 @@ void mapReads(char* fastaInPath, char* saFile, char* readsInPath,
 
   IncrementalLCSkSolver* solver = new IncrementalLCSkSolver(seq);
 
-  solver->kmerK_ = 10;
-  solver->maxMatchNum_ = 80;
-  solver->minMatchNum_ = 15;
-
-//  LCSkSolver* slvr = new LCSkSolver(seq);
-//  slvr->kmerK_ = 10;
-//  //slvr->readSuffixArrayFromFile(saFile);
+  solver->kmerK_ = k;
+  solver->maxMatchNum_ = h;
+  solver->minMatchNum_ = l;
 
   solver->readSuffixArrayFromFile(saFile);
-  Mapper* mapper = new Mapper(seq, solver, 4);
-  printf("Mapping reads to sequence\n");
+  Mapper* mapper = new Mapper(seq, solver, t);
+  fprintf(stderr, "Mapping reads to sequence\n");
   mapper->mapAllReads(readsInPath, outputFilePath);
 
-  printf("\nComplete\n");
+  fprintf(stderr, "\nComplete\n");
 
   delete mapper;
   delete solver;

@@ -18,8 +18,6 @@
 #define KMER_K 15
 #define WINDOW_SIZE 2
 
-//#define SW_START_OFFSET 25
-//#define SW_END_OFFSET 25
 
 class LCSkSolver : public Solver {
  public:
@@ -36,8 +34,6 @@ class LCSkSolver : public Solver {
 
   uint32_t kmerK_;
   uint32_t windowSize_;
-//  uint32_t swStartOffset_;
-//  uint32_t swEndOffset_;
 
  private:
   virtual void runLCSkpp(int startIndex, int endIndex,

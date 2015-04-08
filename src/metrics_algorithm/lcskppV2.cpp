@@ -23,10 +23,13 @@ bool operator<(const eventK_t &a, const eventK_t &b) {
   if (a.index != b.index)
     return a.index < b.index;
 
+  if (a.isStart != b.isStart)
+    return a.isStart < b.isStart;
+
+  // LOLOLOL
   if (a.k != b.k)
     return a.k < b.k;
 
-  return a.isStart < b.isStart;
 }
 
 bool operator==(const eventK_t &a, const eventK_t &b) {
