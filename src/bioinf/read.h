@@ -17,13 +17,16 @@
 #include "bioinf/position.h"
 #include "util/utility_functions.h"
 
+#define MAX_KEEP 80
+#define KEEP_FACTOR 1.2f
+
 KSEQ_INIT(int, read)
 
 namespace bioinf {
 
 class Read {
  public:
-  Read();
+  Read(float keepRatio = KEEP_FACTOR, uint32_t maxPositions = MAX_KEEP);
   ~Read();
 
   void clear();
@@ -40,11 +43,14 @@ class Read {
 
   void addPosition(uint32_t score, uint32_t start, uint32_t end,
                    bool isComplement = false, const char* cigar = NULL,
-                   uint32_t cigarLen = 0);
+                   uint32_t cigarLen = 0, uint32_t secondaryScore = 0);
+  void addPosition(Position* position);
 
-  std::multiset<Position*, ptr_compare<Position> >& positions();
+  std::set<Position*, ptr_compare<Position> >& positions();
   Position* bestPosition(uint32_t index);
   uint32_t positionsSize();
+  void keepRatio(float keepRatio);
+  void maxPositions(uint32_t maxPositions);
   bool basesInt();
 
  private:
@@ -56,7 +62,10 @@ class Read {
   char* quality_;
 
   bool basesAsInt_;
-  std::multiset<Position*, ptr_compare<Position> > positions_;
+  std::set<Position*, ptr_compare<Position> > positions_;
+
+  float keepRatio_;
+  uint32_t maxPositions_;
 
 };
 

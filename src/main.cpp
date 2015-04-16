@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
 
   int option;
   char mode[MODE_LEN];
-  while ((option = getopt(argc, argv, "m:t:k:l:h:")) >= 0) {
+  while ((option = getopt(argc, argv, "m:t:k:l:h:kf:pos:")) >= 0) {
     switch (option) {
       case 'm':
         strncpy(mode, optarg, MODE_LEN);
@@ -103,8 +103,9 @@ int main(int argc, char **argv) {
 void verboseUsageAndExit() {
 
   fprintf(stderr, "\n");
-  fprintf(stderr,
-          "Usage - create index: mapper -m index <fastaFile> <suffixArrayOutputFile>\n");
+  fprintf(
+      stderr,
+      "Usage - create index: mapper -m index <fastaFile> <suffixArrayOutputFile>\n");
   fprintf(
       stderr,
       "Usage - map reads: mapper -m map [options...] <fastaFile> <suffixArrayOutputFile> <readsFASTQ> <resultOutputFile>\n");
@@ -120,6 +121,14 @@ void verboseUsageAndExit() {
   fprintf(
       stderr,
       "  -h upperLimit  upperLimit is maximum allowed number of hits. [default: / ]\n");
+
+  fprintf(
+      stderr,
+      "  -kf factor  factor float value that represents minimum ratio bestScore/score of reads that are being kept. [default: 1.2 ]\n");
+
+  fprintf(
+      stderr,
+      "  -pos N  N is maximum allowed number of positions that are kept per read [default: 80 ]\n");
 
   exit(-1);
 }
@@ -162,9 +171,11 @@ void mapReads(int argc, char** argv) {
   uint32_t l = MIN_MATCH_NUM;
   uint32_t h = MAX_MATCH_NUM;
   uint32_t t = omp_get_num_procs();
+  float kf = KEEP_FACTOR;
+  uint32_t maxPos = MAX_KEEP;
 
   int option;
-  while ((option = getopt(argc, argv, "m:t:k:l:h:")) >= 0) {
+  while ((option = getopt(argc, argv, "m:t:k:l:h:kf:pos:")) >= 0) {
     switch (option) {
       case 't':
         t = atoi(optarg);
@@ -177,6 +188,12 @@ void mapReads(int argc, char** argv) {
         break;
       case 'h':
         h = atoi(optarg);
+        break;
+      case 'kf':
+        kf = atof(optarg);
+        break;
+      case 'pos':
+        maxPos = atoi(optarg);
         break;
     }
   }
@@ -207,7 +224,7 @@ void mapReads(int argc, char** argv) {
   solver->minMatchNum_ = l;
 
   solver->readSuffixArrayFromFile(saFile);
-  Mapper* mapper = new Mapper(seq, solver, t);
+  Mapper* mapper = new Mapper(seq, solver, t, kf, maxPos);
   fprintf(stderr, "Mapping reads to sequence\n");
   mapper->mapAllReads(readsInPath, outputFilePath);
 

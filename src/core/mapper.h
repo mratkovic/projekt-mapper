@@ -25,7 +25,7 @@ class Mapper {
 
  public:
 
-  Mapper(Sequence* seq, Solver* solver, uint32_t threadNum = omp_get_num_procs());
+  Mapper(Sequence* seq, Solver* solver, uint32_t threadNum = omp_get_num_procs(), float minKeepScoreRatio = KEEP_FACTOR, uint32_t maxPositionsPerRead = MAX_KEEP);
   void mapAllReads(char* readsInPath, char* solutionOutPath);
 
  private:
@@ -45,5 +45,8 @@ class Mapper {
   Sequence* seq_;
   Solver* solver_;
   uint32_t threadNum_;
+
+  float minKeepScoreRatio_;
+  uint32_t maxPositionsPerRead_;
 };
 #endif

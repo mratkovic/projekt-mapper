@@ -45,19 +45,21 @@ static inline bool isValidBaseACGT(char base) {
  */
 static inline uint8_t baseToInt(char base) {
   base = toupper(base);
+  switch (base) {
 
-  if (base == 'A')
-    return 0;
-  if (base == 'C')
-    return 1;
-  if (base == 'G')
-    return 2;
-  if (base == 'T')
-    return 3;
-  if (base == 'N')
-    return 4;
-
-  return UCHAR_MAX;
+    case 'A':
+      return 0;
+    case 'C':
+      return 1;
+    case 'G':
+      return 2;
+    case 'T':
+      return 3;
+    case 'N':
+      return 4;
+    default:
+      return UCHAR_MAX;
+  }
 
 }
 /**
@@ -72,20 +74,20 @@ static inline uint8_t baseToInt(char base) {
  * @return number assigned to base
  */
 inline char intToBase(const uint8_t num) {
-  if (num == 0)
-    return 'A';
-  if (num == 1)
-    return 'C';
-  if (num == 2)
-    return 'G';
-  if (num == 3)
-    return 'T';
-
-  if (num == 4)
-    return 'N';
-
-  // should never happen
-  return 0;
+  switch (num) {
+    case 0:
+      return 'A';
+    case 1:
+      return 'C';
+    case 2:
+      return 'G';
+    case 3:
+      return 'T';
+    case 4:
+      return 'N';
+    default:
+      return 0;
+  }
 }
 /**
  * Function that calculates complement of given base.
@@ -98,17 +100,18 @@ inline char getACGTComplement(char base) {
   base = toupper(base);
   assert(isValidBaseACGT(base));
 
-  if (base == 'A')
-    return 'T';
-  else if (base == 'T')
-    return 'A';
-  else if (base == 'C')
-    return 'G';
-  else if (base == 'G')
-    return 'C';
-  else
-    return 'N';
-
+  switch (base) {
+    case 'A':
+      return 'T';
+    case 'C':
+      return 'G';
+    case 'G':
+      return 'C';
+    case 'T':
+      return 'A';
+    default:
+      return 'N';
+  }
 }
 
 /**
@@ -119,21 +122,23 @@ inline char getACGTComplement(char base) {
  * @return complement of given base also as small int
  */
 inline uint8_t getACGTComplementAsSmallInt(uint8_t base) {
-  // A to T
-  if (base == 0)
-    return 3;
-  else if (base == 3)
-    return 0;
 
-  // C to G
-  else if (base == 1)
-    return 2;
-  else if (base == 2)
-    return 1;
-
-  // N
-  else
-    return 4;
+  switch (base) {
+    case 0:
+      // A to T
+      return 3;
+    case 1:
+      // C to G
+      return 2;
+    case 2:
+      // G to C
+      return 1;
+    case 3:
+      // T to A
+      return 0;
+    default:
+      return 4;
+  }
 
 }
 

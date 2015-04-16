@@ -31,10 +31,13 @@ using namespace bioinf;
 //                    false, NULL, 0);
 //}
 
-Mapper::Mapper(Sequence* seq, Solver* solver, uint32_t threadNum)
+Mapper::Mapper(Sequence* seq, Solver* solver, uint32_t threadNum,
+               float minKeepScoreRatio, uint32_t maxPositionsPerRead)
     : seq_(seq),
       solver_(solver),
-      threadNum_(threadNum) {
+      threadNum_(threadNum),
+      minKeepScoreRatio_(minKeepScoreRatio),
+      maxPositionsPerRead_(maxPositionsPerRead) {
 
 }
 
@@ -95,7 +98,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath) {
 
   fillSAMHeader(solutionOut);
   kseq_t* kseq = kseq_init(fileno(readsIn));
-  Read* singleRead = new Read;
+  Read* singleRead = new Read(minKeepScoreRatio_, maxPositionsPerRead_);
 
   omp_set_dynamic(0);
   omp_set_num_threads(threadNum_);
@@ -130,7 +133,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath) {
           fprintf(stderr, "-%d-\n", cntr);
         }
         ++cntr;
-        singleRead = new Read();
+        singleRead = new Read(minKeepScoreRatio_, maxPositionsPerRead_);
       }
     }
 #pragma omp barrier

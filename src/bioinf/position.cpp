@@ -9,19 +9,22 @@
 #include <cstring>
 
 Position::Position() {
-  score_ = start_ = end_ = 0;
+  score_ = secondary_score_ = start_ = end_ = 0;
   complement_ = false;
   cigar_ = 0;
 }
 
-Position::Position(uint32_t score, uint32_t start, uint32_t end,
-                   bool complement, const char* cigarStr, uint32_t cigarLen)
+Position::Position(uint32_t score, uint32_t secondaryScore, uint32_t start,
+                   uint32_t end, bool complemented, const char* cigarStr,
+                   uint32_t cigarLen)
     : score_(score),
+      secondary_score_(secondaryScore),
       start_(start),
       end_(end),
-      complement_(complement),
+      complement_(complemented),
       cigar_(0) {
-  cigar(cigarStr, cigarLen);
+
+      cigar(cigarStr, cigarLen);
 }
 
 bool Position::isComplement() {
@@ -34,12 +37,15 @@ void Position::setComplement(bool complemented) {
 uint32_t Position::score() const {
   return score_;
 }
+uint32_t Position::secondaryScore() const {
+  return secondary_score_;
+}
 
 uint32_t Position::end() {
   return end_;
 }
 
-uint32_t Position::start() {
+uint32_t Position::start() const {
   return start_;
 }
 
@@ -48,6 +54,10 @@ void Position::end(uint32_t end) {
 }
 void Position::start(uint32_t start) {
   start_ = start;
+}
+
+void Position::score(uint32_t score) {
+  score_ = score;
 }
 
 const char* Position::cigar() {

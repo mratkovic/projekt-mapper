@@ -10,15 +10,16 @@
 #include "bioutil.h"
 
 #define LINE_SIZE 30000
-#define KEEP_FACTOR 1.2f
-#define MAX_KEEP 120
 
 namespace bioinf {
 
-Read::Read() {
+Read::Read(float keepRatio, uint32_t maxPositions)
+    : keepRatio_(keepRatio),
+      maxPositions_(maxPositions) {
   id_ = data_ = optional_identifier_ = quality_ = 0;
   dataLen_ = 0;
   basesAsInt_ = false;
+
 }
 Read::~Read() {
   clear();
@@ -26,14 +27,19 @@ Read::~Read() {
 
 void Read::addPosition(uint32_t score, uint32_t start, uint32_t end,
                        bool isComplement, const char* cigar,
-                       uint32_t cigarLen) {
+                       uint32_t cigarLen, uint32_t secondaryScore) {
 
-  Position* p = new Position(score, start, end, isComplement, cigar, cigarLen);
+  Position* p = new Position(score,secondaryScore, start, end, isComplement, cigar, cigarLen);
+  addPosition(p);
 
+}
+
+void Read::addPosition(Position* p) {
   positions_.insert(p);
   while (positions_.size() > 1
       && ((((double) (*positions_.rbegin())->score()
-          / (*positions_.begin())->score()) > KEEP_FACTOR) || positions_.size() > MAX_KEEP)) {
+          / (*positions_.begin())->score()) > KEEP_FACTOR)
+          || positions_.size() > MAX_KEEP)) {
 
     delete *positions_.begin();
     positions_.erase(positions_.begin());
@@ -52,7 +58,7 @@ Position* Read::bestPosition(uint32_t index) {
   }
   return NULL;
 }
-std::multiset<Position*, ptr_compare<Position> >& Read::positions() {
+std::set<Position*, ptr_compare<Position> >& Read::positions() {
   return positions_;
 }
 uint32_t Read::positionsSize() {
@@ -64,6 +70,13 @@ const char* Read::data() {
 }
 const char* Read::id() {
   return id_;
+}
+
+void Read::keepRatio(float keepRatio) {
+  keepRatio_ = keepRatio;
+}
+void Read::maxPositions(uint32_t maxPositions) {
+  maxPositions_ = maxPositions;
 }
 
 uint32_t Read::dataLen() {
@@ -106,7 +119,6 @@ bool Read::readNextFromFASTQ(kseq_t* seq) {
     return false;
   }
 
-  uint32_t size = seq->name.l + 1;
   id_ = seq->name.s;
   data_ = seq->seq.s;
   dataLen_ = seq->seq.l;
@@ -161,8 +173,9 @@ Read* Read::getReverseComplement() {
 }
 void Read::printReadSAM(FILE* outFile, Sequence* seq) {
   Position* best = bestPosition(0);
-  //printf("%d\n", positions_.size());
+
   if (best != NULL) {
+
     allBasesToLetters();
 
     uint32_t seqIndex = seq->sequenceIndex(best->start());
@@ -172,8 +185,17 @@ void Read::printReadSAM(FILE* outFile, Sequence* seq) {
             best->isComplement() ? 16 : 0, seq->info(seqIndex), start + 1,
             (uint32_t) best->score(), best->cigar(), '*', 0, 0, data_,
             quality_);
+
+//    if (positions_.size() > 4 && false) {
+//      fprintf(stdout, "%s\t%d\t%s\t%d\t%d\n", id_,
+//              best->isComplement() ? 16 : 0, seq->info(seqIndex), start + 1,
+//              (uint32_t) best->score());
+//    }
+
   } else {
     // TODO: nije mapiran
   }
+
 }
+
 }  // end namespace

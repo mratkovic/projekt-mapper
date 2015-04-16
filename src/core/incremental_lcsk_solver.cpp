@@ -71,11 +71,22 @@ void IncrementalLCSkSolver::runLCSkpp(int startIndex, int endIndex,
   // te ukoliko je manje od mog minimuma preskoci
   // ovisno o kvaliteti readova
 
-
   // MOZE BEZ OVOG?????, dam iterator i velicinu
   // std::vector<int>::const_iterator a i to e to
+  // jeli vridnoo
+
+  uint32_t aproxMaxLen = 0;
   for (int i = startIndex; i < endIndex; ++i) {
     lcsKData.push_back(pos[i]);
+    aproxMaxLen += pos[i].third;
+  }
+
+  if (read->bestPosition(0) != NULL) {
+    uint32_t currentLen = read->bestPosition(0)->score() / KEEP_FACTOR;
+    if (currentLen > aproxMaxLen) {
+      // no way it could produce better position
+      return;
+    }
   }
 
   std::vector<std::pair<uint32_t, uint32_t> > result;
