@@ -14,22 +14,6 @@
 
 using namespace bioinf;
 
-//void Mapper::runLIS(int startIndex, int endIndex,
-//                    std::vector<std::pair<uint32_t, uint32_t> > &pos,
-//                    Read* read) {
-//  std::vector<std::pair<uint32_t, uint32_t> > lisData;
-//
-//  for (int i = startIndex; i < endIndex; ++i) {
-//    lisData.push_back(pos[i]);
-//  }
-//
-//  std::vector<int> lisResult;
-//  Lis::calcLIS(&lisResult, lisData);
-//
-//  int beginPos = Lis::estimateBeginingPosFromLIS(pos, lisResult);
-//  read->addPosition(lisResult.size(), beginPos, beginPos + read->dataLen(),
-//                    false, NULL, 0);
-//}
 
 Mapper::Mapper(Sequence* seq, Solver* solver, uint32_t threadNum,
                float minKeepScoreRatio, uint32_t maxPositionsPerRead)
@@ -111,9 +95,9 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath) {
   Sequence* seq = seq_;
   Solver* solver = solver_;
 
-#pragma omp parallel
+  #pragma omp parallel
   {
-#pragma omp single
+     #pragma omp single
     {
 
       uint32_t cntr = 0;
@@ -121,7 +105,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath) {
       while (singleRead->readNextFromFASTQ(kseq)) {
         Read* read = singleRead;
 
-#pragma omp task firstprivate(read) shared(tmpOutput) shared(seq) shared(solver)
+        #pragma omp task firstprivate(read) shared(tmpOutput) shared(seq) shared(solver)
         {
           // create task for  solving single read
           solver->findReadPosition(read);
@@ -136,7 +120,7 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath) {
         singleRead = new Read(minKeepScoreRatio_, maxPositionsPerRead_);
       }
     }
-#pragma omp barrier
+  #pragma omp barrier
   }
 
   mergeTmpFiles(tmpFileNames, tmpOutput, solutionOut, threadNum_);

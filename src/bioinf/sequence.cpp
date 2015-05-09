@@ -128,6 +128,11 @@ void Sequence::readSingleSequenceFromFASTA(FILE* fastaIn) {
 
   kseq_destroy(seq);
 }
+
+bool Sequence::basesInt() {
+  return basesAsInt_;
+}
+
 void Sequence::allBasesToSmallInt() {
   if (basesAsInt_) {
     return;

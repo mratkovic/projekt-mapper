@@ -104,7 +104,7 @@ void IncrementalLCSkSolver::runLCSkpp(int startIndex, int endIndex,
   }
 
   beginPos = std::max(beginPos, 0);
-  read->addPosition(score, beginPos, endPos);
+  read->addPosition(score, beginPos, endPos, false, NULL, 0, lcsKData.size());
 }
 
 uint32_t IncrementalLCSkSolver::getKmerPositions(

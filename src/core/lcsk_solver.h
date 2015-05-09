@@ -18,6 +18,11 @@
 #define KMER_K 15
 #define WINDOW_SIZE 2
 
+#define SSW_MATCH 5
+#define SSW_MISMATCH 4
+#define SSW_GAP_OPEN 8
+#define SSW_GAP_EXTEND 8
+
 
 class LCSkSolver : public Solver {
  public:

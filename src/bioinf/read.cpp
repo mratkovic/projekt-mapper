@@ -38,8 +38,8 @@ void Read::addPosition(Position* p) {
   positions_.insert(p);
   while (positions_.size() > 1
       && ((((double) (*positions_.rbegin())->score()
-          / (*positions_.begin())->score()) > KEEP_FACTOR)
-          || positions_.size() > MAX_KEEP)) {
+          / (*positions_.begin())->score()) > keepRatio_)
+          || positions_.size() > maxPositions_)) {
 
     delete *positions_.begin();
     positions_.erase(positions_.begin());
@@ -175,7 +175,9 @@ void Read::printReadSAM(FILE* outFile, Sequence* seq) {
   Position* best = bestPosition(0);
 
   if (best != NULL) {
-
+//    if (positions_.size() != 1) {
+//      return;
+//    }
     allBasesToLetters();
 
     uint32_t seqIndex = seq->sequenceIndex(best->start());
