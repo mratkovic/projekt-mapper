@@ -50,7 +50,13 @@ Options:
 </ul>
 
 Example: 
+<p>
+Create index
 <code>./mapper -m index caenorhabditis_elegans.fa caenorhabditis_elegans.fa.suffa </code>
+</p>
+
+<p>
+Map reads
 <code>./mapper -m map -t 4 -k 10 -l 20 -h 45 caenorhabditis_elegans.fa caenorhabditis_elegans.fa.suffa caenorhabditis_elegans/reads.fa MAPPER-10-45-20-v1.sam</code>
 </p>
 
