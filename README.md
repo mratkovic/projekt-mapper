@@ -50,8 +50,8 @@ Options:
 </ul>
 
 Example: 
-./mapper -m index caenorhabditis_elegans.fa caenorhabditis_elegans.fa.suffa
-./mapper -m map -t 4 -k 10 -l 20 -h 45 caenorhabditis_elegans.fa caenorhabditis_elegans.fa.suffa caenorhabditis_elegans/reads.fa MAPPER-10-45-20-v1.sam
+<code>./mapper -m index caenorhabditis_elegans.fa caenorhabditis_elegans.fa.suffa </code>
+<code>./mapper -m map -t 4 -k 10 -l 20 -h 45 caenorhabditis_elegans.fa caenorhabditis_elegans.fa.suffa caenorhabditis_elegans/reads.fa MAPPER-10-45-20-v1.sam</code>
 </p>
 
 
