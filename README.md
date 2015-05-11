@@ -1,5 +1,8 @@
 projekt-mapper
 ==============
+
+// POTREBNO AZURIRATI OPIS
+
 Sustav za mapiranje DNA sekvenci na referentni genom
 
 
@@ -29,16 +32,22 @@ libdivsufsort - https://code.google.com/p/libdivsufsort/
 <hr>Korištenje:</h3>
 
 <p>
-<code>mapper construct 'fastaFile' 'suffixArrayOutputFile'</code><br>
-Za zadani genom u FASTA formatu unutar ulazne datoteke se izgradi sufiksno polje i pohrani u zadanu datoteku.
+<code>mapper -m index 'fastaFile' 'suffixArrayOutputFile'</code><br>
+Za zadanu sekvencu u FASTA formatu unutar ulazne datoteke se izgradi sufiksno polje i pohrani u zadanu datoteku.
 </p>
 <p>
-<code>mapper map 'fastaFile' 'suffixArrayOutputFile' 'reads' 'resultOutputFile'</code><br>
+<code>mapper -m map [options] 'fastaFile' 'suffixArrayOutputFile' 'readsInputFASTQ' 'resultOutputFile'</code><br>
 Na zadani referentni genom predan u FASTA formatu, korištenjem prethodno izgrađenog sufiksnog polja se mapiraju kratka očitanja pohranjena u FASTQ formatu unutar predane datoteke. Rezultat u SAM formatu se zapisuje u zadanu izlaznu datoteku.
-</p>
-<p>
-<code>mapper validate 'referenceSAM' 'testSAM'</code><br>
-Usporeduje početne pozicije readova testnog file-a s onima u referentnom, te ispise statistiku
+
+Options:
+<ul>
+<li>-t N      N is thread number. [default: number of cores]</li>
+<li>-k N      N is seed length. [default: 15]</li>
+<li>-l lowerLimit     lowerLimit is minimum required number of hits. [default: / ]</li>
+<li>-h upperLimit    upperLimit is maximum allowed number of hits. [default: / ]</li>
+<li>-kf factor     factor float value that represents minimum ratio bestScore/score of reads that are being kept. [default: 1.2 ]</li>
+<li>--pos N     N is maximum allowed number of positions that are kept per read [default: 80 ]</li>
+</ul>
 </p>
 
  
