@@ -48,7 +48,13 @@ Options:
 <li>-kf factor     factor float value that represents minimum ratio bestScore/score of reads that are being kept. [default: 1.2 ]</li>
 <li>--pos N     N is maximum allowed number of positions that are kept per read [default: 80 ]</li>
 </ul>
+
+Example: 
+./mapper -m index caenorhabditis_elegans.fa caenorhabditis_elegans.fa.suffa
+./mapper -m map -t 4 -k 10 -l 20 -h 45 caenorhabditis_elegans.fa caenorhabditis_elegans.fa.suffa caenorhabditis_elegans/reads.fa MAPPER-10-45-20-v1.sam
 </p>
+
+
 
  
 <h4>Dodatno o LCSk matrici:</h4>
