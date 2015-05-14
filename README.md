@@ -43,8 +43,8 @@ Options:
 <ul>
 <li>-t N      N is thread number. [default: number of cores]</li>
 <li>-k N      N is seed length. [default: 15]</li>
-<li>-l lowerLimit     lowerLimit is minimum required number of hits. [default: / ]</li>
-<li>-h upperLimit    upperLimit is maximum allowed number of hits. [default: / ]</li>
+<li>-l lowerLimit     lowerLimit is minimum required number of hits. [default: 45 ]</li>
+<li>-h upperLimit    upperLimit is maximum allowed number of hits. [default: 20 ]</li>
 <li>-kf factor     factor float value that represents minimum ratio bestScore/score of reads that are being kept. [default: 1.2 ]</li>
 <li>--pos N     N is maximum allowed number of positions that are kept per read [default: 80 ]</li>
 </ul>

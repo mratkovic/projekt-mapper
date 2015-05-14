@@ -8,8 +8,8 @@
 #ifndef SRC_CORE_INCREMENTAL_LCSK_SOLVER_H_
 #define SRC_CORE_INCREMENTAL_LCSK_SOLVER_H_
 
-#define MAX_MATCH_NUM 15
-#define MIN_MATCH_NUM 5
+#define MAX_MATCH_NUM 45
+#define MIN_MATCH_NUM 20
 
 #include <cstdint>
 #include <vector>

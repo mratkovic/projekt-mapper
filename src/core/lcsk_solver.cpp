@@ -141,20 +141,30 @@ void LCSkSolver::findReadPosition(bioinf::Read* read) {
   }
   bioinf::Read* reverse_complement = read->getReverseComplement();
   fillPositions(read);
+
+  // add to keep best score and skip lcsk calculations
+  // that will never give best score
+  Position* p = read->bestPosition(0);
+  reverse_complement->addPosition(p->score(), p->start(), p->end(),
+                                  p->isComplement());
   fillPositions(reverse_complement);
 
   std::multiset<Position*, ptr_compare<Position> >::reverse_iterator it =
       reverse_complement->positions().rbegin();
 
-  for (; it != reverse_complement->positions().rend(); ++it) {
-    (*it)->setComplement(true);
-    read->addPosition((*it)->score(), (*it)->start(), (*it)->end(), true);
+  for (auto& it : reverse_complement->positions()) {
+    if(it->score() == p->score() && it->start() == p->start() && it->end() == p->end()) {
+      // skup position that was previously inserted to track best score
+      continue;
+    }
+
+    it->setComplement(true);
+    read->addPosition(it->score(), it->start(), it->end(), true);
   }
 
   std::set<Position*, ptr_compare<Position> > tmp_set = read->positions();
   read->positions().clear();
   read->keepRatio(1.00f);
-  // printf("EDLIB: %d\n", tmp_set.size());
 
   for (it = tmp_set.rbegin(); it != tmp_set.rend(); ++it) {
     int32_t start = std::max<int32_t>(0,
@@ -191,15 +201,15 @@ void LCSkSolver::findReadPosition(bioinf::Read* read) {
     start = startLocations[0] + start;
     end = endLocations[0] + start;
 
-    int secondaryScore = read->dataLen()
-        - abs(read->dataLen() - (end - start + 1));
-
-    secondaryScore = (*it)->secondaryScore();
-    secondaryScore = 0;
+//    int secondaryScore = read->dataLen()
+//        - abs(read->dataLen() - (end - start + 1));
+//
+//    secondaryScore = (*it)->secondaryScore();
+    int secondaryScore = (*it)->score();
     int newScore = 3 * read->dataLen() - score;
 
     read->addPosition(newScore, start, end, (*it)->isComplement(), cigar,
-                      strlen(cigar), secondaryScore);
+                      strlen(cigar), tmp_set.size());
     free(cigar);
     if (endLocations) {
       free(endLocations);

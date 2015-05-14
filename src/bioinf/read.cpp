@@ -175,9 +175,6 @@ void Read::printReadSAM(FILE* outFile, Sequence* seq) {
   Position* best = bestPosition(0);
 
   if (best != NULL) {
-//    if (positions_.size() != 1) {
-//      return;
-//    }
     allBasesToLetters();
 
     uint32_t seqIndex = seq->sequenceIndex(best->start());
@@ -185,17 +182,8 @@ void Read::printReadSAM(FILE* outFile, Sequence* seq) {
 
     fprintf(outFile, "%s\t%d\t%s\t%d\t%d\t%s\t%c\t%d\t%d\t%s\t%s\n", id_,
             best->isComplement() ? 16 : 0, seq->info(seqIndex), start + 1,
-            (uint32_t) best->score(), best->cigar(), '*', 0, 0, data_,
+            (uint32_t) best->secondaryScore(), best->cigar(), '*', 0, 0, data_,
             quality_);
-
-//    if (positions_.size() > 4 && false) {
-//      fprintf(stdout, "%s\t%d\t%s\t%d\t%d\n", id_,
-//              best->isComplement() ? 16 : 0, seq->info(seqIndex), start + 1,
-//              (uint32_t) best->score());
-//    }
-
-  } else {
-    // TODO: nije mapiran
   }
 
 }

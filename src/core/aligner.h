@@ -16,7 +16,10 @@
 #include <omp.h>
 
 #define THREAD_NUM std::max(omp_get_num_procs() / 2, 12)
-
+/**
+ * Quick tmp info,
+ *
+ */
 class Aligner {
  public:
   Aligner(uint32_t kmerK = KMER_K, uint32_t lowerMatchesLimit = MIN_MATCH_NUM,
