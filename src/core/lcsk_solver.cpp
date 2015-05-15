@@ -145,15 +145,18 @@ void LCSkSolver::findReadPosition(bioinf::Read* read) {
   // add to keep best score and skip lcsk calculations
   // that will never give best score
   Position* p = read->bestPosition(0);
-  reverse_complement->addPosition(p->score(), p->start(), p->end(),
-                                  p->isComplement());
+  if (p) {
+    reverse_complement->addPosition(p->score(), p->start(), p->end(),
+                                    p->isComplement());
+  }
   fillPositions(reverse_complement);
 
   std::multiset<Position*, ptr_compare<Position> >::reverse_iterator it =
       reverse_complement->positions().rbegin();
 
   for (auto& it : reverse_complement->positions()) {
-    if(it->score() == p->score() && it->start() == p->start() && it->end() == p->end()) {
+    if (p && it->score() == p->score() && it->start() == p->start()
+        && it->end() == p->end()) {
       // skup position that was previously inserted to track best score
       continue;
     }
