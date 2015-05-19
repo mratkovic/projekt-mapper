@@ -27,6 +27,8 @@ void IncrementalLCSkSolver::fillPositions(bioinf::Read* read) {
   uint32_t len = kmerK_;
   for (uint32_t i = kmerK_; i < read->dataLen(); ++i) {
     len = getKmerPositions(read, pos, i - kmerK_, len);
+    len = std::max<int>(kmerK_, len - 2);
+    // nastavi s zavrsnom duzinom - 2
   }
 
   std::sort(pos.begin(), pos.end());
@@ -125,7 +127,7 @@ uint32_t IncrementalLCSkSolver::getKmerPositions(
     positions.push_back(triplet_t<uint32_t>(matches[i], kmerStart, len));
   }
 
-  return std::max<int>(kmerK_, len - 1);
+  return len;
 }
 
 void IncrementalLCSkSolver::printInfo() {

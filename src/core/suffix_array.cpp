@@ -107,7 +107,7 @@ const int* SuffixArray::iterativeSearch(const char* pattern, int length,
                                 (const sauchar_t *) pattern, currentLen,
                                 &suffix_array_[0], textLen_, &firstIndex);
 
-  } while (*numOfSolutions > solUpperLimit && currentLen <= length);
+  } while (*numOfSolutions > solUpperLimit && currentLen < length);
 
   *finalLen = currentLen;
   if (*numOfSolutions < solLowerLimit && prevNumOfSolutions != -1) {
