@@ -198,7 +198,7 @@ void LCSkSolver::findReadPosition(bioinf::Read* read) {
     }
 
     char* cigar;
-    edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_EXTENDED,
+    edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_STANDARD,
                           &cigar);
 
     start = startLocations[0] + start;
