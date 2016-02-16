@@ -53,7 +53,7 @@ void IncrementalLCSkSolver::fillPositions(bioinf::Read* read) {
     // pomakni pocetak prozora za duljinu reada od proslog pocetka
     for (;
         startIndex < pos.size()
-            && pos[startIndex].first < lastPosition + read->dataLen();
+            && pos[startIndex].first < lastPosition + read->dataLen(); //vidit i raymislit
         ++startIndex) {
       ;
     }

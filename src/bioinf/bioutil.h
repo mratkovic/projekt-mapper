@@ -19,6 +19,7 @@
 #include <map>
 
 namespace bioinf {
+
 /**
  * Function tests if base passed as argument is valid.
  * Valid bases are A, C, G, T and N.
@@ -46,7 +47,6 @@ static inline bool isValidBaseACGT(char base) {
 static inline uint8_t baseToInt(char base) {
   base = toupper(base);
   switch (base) {
-
     case 'A':
       return 0;
     case 'C':
