@@ -5953,61 +5953,6 @@ void Mapper::mergeTmpFiles(char fileNames[][MAX_TMP_NAME_LEN], FILE* tmpFiles[],
     }
 }
 void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath) {
-//    fprintf(stderr, "Stats: t:%d\n", threadNum_);
-//    solver_->printInfo();
-//
-//    FILE* readsIn = fopen(readsInPath, "r");
-//    FILE* solutionOut = fopen(solutionOutPath, "w");
-//
-//    fillSAMHeader(solutionOut);
-//    kseq_t* kseq = kseq_init(fileno(readsIn));
-//    Read* singleRead = new Read(minKeepScoreRatio_, maxPositionsPerRead_);
-//
-//    //omp_set_dynamic(0);
-//    //omp_set_num_threads(threadNum_);
-//
-//    FILE* tmpOutput[threadNum_];
-//    char tmpFileNames[threadNum_][MAX_TMP_NAME_LEN];
-//    createTmpFiles(tmpOutput, tmpFileNames, threadNum_);
-//
-//    // OPENMP workaround
-//    Sequence* seq = seq_;
-//    Solver* solver = solver_;
-//
-//#pragma omp parallel
-//    {
-//#pragma omp single
-//        {
-//
-//            uint32_t cntr = 0;
-//
-//            while (singleRead->readNextFromFASTQ(kseq)) {
-//                Read* read = singleRead;
-//
-//#pragma omp task firstprivate(read) shared(tmpOutput) shared(seq) shared(solver)
-//                {
-//                    // create task for  solving single read
-//                    solver->findReadPosition(read);
-//                    //read->printReadSAM(tmpOutput[omp_get_thread_num()], seq);
-//                    delete read;
-//                }
-//
-//                if(cntr % 25 == 0) {
-//                    fprintf(stderr, "-%d-\n", cntr);
-//                }
-//                ++cntr;
-//                singleRead = new Read(minKeepScoreRatio_, maxPositionsPerRead_);
-//            }
-//        }
-//#pragma omp barrier
-//    }
-//
-//    mergeTmpFiles(tmpFileNames, tmpOutput, solutionOut, threadNum_);
-//
-//    delete singleRead;
-//    fclose(solutionOut);
-//    fclose(readsIn);
-//    fprintf(stderr, "Completed\n");
 }
 
 }
@@ -6607,6 +6552,6 @@ int test(const int testDifficulty) {
 }
 
 int main() {
-    test(0);
+    test(1);
 }
 #endif
