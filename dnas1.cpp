@@ -6,13 +6,13 @@ using namespace std;
 
 namespace hawker {
 
-const int KMER = 32;
+const int KMER = 22;
 const int MAX_KMER = 70;
 const int LO_CNT = 2;
-const int HI_CNT = 8;
+const int HI_CNT = 12;
 const int THREADS = 1;
-const double KEEP_F = 2.1;
-const int KEEP_NUM = 25;
+const double KEEP_F = 2.5;
+const int KEEP_NUM = 165;
 const int MAX_EDIT = 35;
 
 #ifndef EDLIB_H
@@ -5765,6 +5765,7 @@ void IncrementalLCSkSolver::fillPositions(Read* read) {
             if(pos.size() >= prev_pos_cnt + minMatchNum_) {
                 // ok, skipamo
                 i = new_i;
+                len = new_len; // dodano da ne nastavljamo s krivim lenom
             }
         }
 
@@ -6221,11 +6222,16 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                     // 100 %
                     scores.push_back(sc * 1.6 / 150.0);
                     scores.push_back(sc * 1.6 / 150.0);
-                } else {
+                } else if(offset < 350){
                     scores.push_back(
                             sc / 150.0 * 1 / (p1s.size() + p2s.size()));
                     scores.push_back(
                             sc / 150.0 * 1 / (p1s.size() + p2s.size()));
+                }else {
+                    scores.push_back(
+                            sc / 150.0 * 0.7 / (p1s.size() + p2s.size()));
+                    scores.push_back(
+                            sc / 150.0 * 0.7 / (p1s.size() + p2s.size()));
                 }
             }
 
@@ -6246,8 +6252,8 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 if(offset < 350 && sc > 148 && (p1s.size() == 1
                         || p2s.size() == 1)) {
                     // 100 %
-                    scores.push_back(sc * 1.5 / 150.0);
-                    scores.push_back(sc * 1.5 / 150.0);
+                    scores.push_back(sc * 0.75 / 150.0);
+                    scores.push_back(sc * 0.75 / 150.0);
                 } else {
                     scores.push_back(
                             sc / 150.0 * 1 / (p1s.size() + p2s.size()));
