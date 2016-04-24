@@ -7,13 +7,14 @@ using namespace std;
 namespace hawker {
 
 const int KMER = 22;
-const int MAX_KMER = 55;
+const int MAX_KMER = 70;
 const int LO_CNT = 2;
-const int HI_CNT = 12;
+const int HI_CNT = 8;
 const int THREADS = 1;
 const double KEEP_F = 2.5;
-const int KEEP_NUM = 165;
+const int KEEP_NUM = 85;
 const int MAX_EDIT = 35;
+
 const bool ALIGN = false;
 const bool FIND_STARTS = false;
 
@@ -108,7 +109,7 @@ int edlibCalcEditDistance(const unsigned char* query, int queryLength,
 
 /**
  * Builds cigar string from given alignment sequence.
- * @param [in] edlibent  Alignment sequence.
+ * @param [in] alignment  Alignment sequence.
  *     0 stands for match.
  *     1 stands for insertion to target.
  *     2 stands for insertion to query.
@@ -293,7 +294,7 @@ int edlibCalcEditDistance(const unsigned char* query, int queryLength,
                     // if it can start with mismatches instead.
                     if(numPositionsSHW != 0) {
                         (*startLocations)[i] = endLocation
-                                - positionsSHW[numPositionsSHW - 1];
+                            - positionsSHW[numPositionsSHW - 1];
                         delete[] positionsSHW;
                     }
                 }
@@ -1490,6 +1491,9 @@ class SuffixArray {
     const int* search(const char* pattern, int length, int* numOfSolutions);
 
     const int* iterativeSearch(const char* pattern, int length, int startLen,
+                               int* numOfSolutions, const int solUpperLimit,
+                               const int solLowerLimit, int* finalLen);
+    const int* iterativeSearchDev(const char* pattern, int length, int startLen,
                                int* numOfSolutions, const int solUpperLimit,
                                const int solLowerLimit, int* finalLen);
 
@@ -4996,6 +5000,61 @@ const int* SuffixArray::iterativeSearch(const char* pattern, int length,
 
 }
 
+const int* SuffixArray::iterativeSearchDev(const char* pattern, int length,
+                                        int startLen, int* numOfSolutions,
+                                        const int solUpperLimit,
+                                        const int solLowerLimit,
+                                        int* finalLen) {
+    int firstIndex = -1;
+    int prevFirstIndex;
+
+    int prevNumOfSolutions;
+    *numOfSolutions = -1;
+
+    int currentLen = startLen - 1;
+
+    // find upper bound
+    int step;
+    for(step = 1; step+startLen < length; step *=2) {
+        prevNumOfSolutions = *numOfSolutions;
+        prevFirstIndex = firstIndex;
+        *numOfSolutions = sa_search((const sauchar_t *) text_, textLen_,
+                                    (const sauchar_t *) pattern, step + startLen,
+                                    &suffix_array_[0], textLen_, &firstIndex);
+        if(*numOfSolutions < solLowerLimit) break;
+    }
+
+    //
+    int lo = step/2;
+    int hi = step;
+
+    for(int i = lo+1; i < hi; ++i) {
+        prevNumOfSolutions = *numOfSolutions;
+        prevFirstIndex = firstIndex;
+        *numOfSolutions = sa_search((const sauchar_t *) text_, textLen_,
+                                    (const sauchar_t *) pattern, i + startLen,
+                                    &suffix_array_[0], textLen_, &firstIndex);
+        if(*numOfSolutions < solLowerLimit) {
+            currentLen = i+startLen;
+            break;
+        }
+    }
+
+    *finalLen = currentLen;
+    if(*numOfSolutions < solLowerLimit && prevNumOfSolutions != -1) {
+        *numOfSolutions = prevNumOfSolutions;
+        firstIndex = prevFirstIndex;
+        *finalLen = currentLen - 1;
+    }
+
+    if(*numOfSolutions == -1) {
+        return numOfSolutions;
+    } else {
+        return &suffix_array_[firstIndex];
+    }
+
+}
+
 void SuffixArray::saveSuffixArray(FILE* out) {
     fwrite(&textLen_, sizeof(textLen_), 1, out);
     fwrite(&suffix_array_[0], sizeof(std::vector<saidx_t>::value_type),
@@ -5545,75 +5604,76 @@ void LCSkSolver::findReadPosition(Read* read) {
     read->keepRatio(1.1f);
 
     for (it = tmp_set.rbegin(); it != tmp_set.rend(); ++it) {
-        int32_t start = std::max<int32_t>(
-                0, (*it)->start() - 0.545 * read->dataLen());
-        uint32_t end = std::min<uint32_t>(sa()->size() - 1,
-                                          (*it)->end() + 0.2 * read->dataLen());
+            int32_t start = std::max<int32_t>(
+                    0, (*it)->start() - 0.545 * read->dataLen());
+            uint32_t end = std::min<uint32_t>(sa()->size() - 1,
+                                              (*it)->end() + 0.2 * read->dataLen());
 
-        int score, numLocations, alignmentLength;
-        int* startLocations = NULL;
-        int* endLocations = NULL;
-        unsigned char* alignment = NULL;
+            int score, numLocations, alignmentLength;
+            int* startLocations = NULL;
+            int* endLocations = NULL;
+            unsigned char* alignment = NULL;
 
-        if((*it)->isComplement()) {
-            edlibCalcEditDistance(
-                    (const unsigned char *) reverse_complement->data(),
-                    reverse_complement->dataLen(),
-                    (const unsigned char *) (sa()->text() + start),
-                    end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS, ALIGN,
-                    &score, &endLocations, &startLocations, &numLocations,
-                    &alignment, &alignmentLength);
+            if((*it)->isComplement()) {
+                edlibCalcEditDistance(
+                        (const unsigned char *) reverse_complement->data(),
+                        reverse_complement->dataLen(),
+                        (const unsigned char *) (sa()->text() + start),
+                        end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS, ALIGN,
+                        &score, &endLocations, &startLocations, &numLocations,
+                        &alignment, &alignmentLength);
 
-        } else {
-            edlibCalcEditDistance(
-                    (const unsigned char *) read->data(), read->dataLen(),
-                    (const unsigned char *) (sa()->text() + start),
-                    end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS, ALIGN,
-                    &score, &endLocations, &startLocations, &numLocations,
-                    &alignment, &alignmentLength);
+            } else {
+                edlibCalcEditDistance(
+                        (const unsigned char *) read->data(), read->dataLen(),
+                        (const unsigned char *) (sa()->text() + start),
+                        end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS, ALIGN,
+                        &score, &endLocations, &startLocations, &numLocations,
+                        &alignment, &alignmentLength);
+            }
+    //        char* cigar;
+    //        edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_EXTENDED,
+    //                              &cigar);
+            //if(startLocations == NULL || alignment == NULL || alignmentLength == 0) continue;
+           // if(startLocations == NULL) continue;
+    //        start = startLocations[0] + start;
+    //        end = endLocations[0] + start;
+
+            end = read->dataLen() + start;
+
+            //int secondaryScore = (*it)->score();
+            //int newScore = read->dataLen() - score;  // 3 * read->dataLen() - score;
+            //cerr << "BLA " << newScore << endl;
+    //        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
+    //                          tmp_set.size());
+
+            int myScore = score;
+    //        for (int i = 0; i < alignmentLength; ++i) {
+    //            if(alignment[i] == 1 || alignment[i] == 2) {
+    //                myScore += 1;
+    //            } else if(alignment[i] == 3) {
+    //                myScore += 1;
+    //            }
+    //        }
+            int newScore = read->dataLen() - myScore;
+            read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
+                              tmp_set.size());
+
+            //free(cigar);
+            if(endLocations) {
+                free(endLocations);
+            }
+            if(startLocations) {
+                free(startLocations);
+            }
+            if(alignment) {
+                free(alignment);
+            }
+            delete (*it);
         }
-//        char* cigar;
-//        edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_EXTENDED,
-//                              &cigar);
-        //if(startLocations == NULL || alignment == NULL || alignmentLength == 0) continue;
-       // if(startLocations == NULL) continue;
-//        start = startLocations[0] + start;
-//        end = endLocations[0] + start;
 
-        end = read->dataLen() + start;
+        delete reverse_complement;
 
-        //int secondaryScore = (*it)->score();
-        //int newScore = read->dataLen() - score;  // 3 * read->dataLen() - score;
-        //cerr << "BLA " << newScore << endl;
-//        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
-//                          tmp_set.size());
-
-        int myScore = score;
-//        for (int i = 0; i < alignmentLength; ++i) {
-//            if(alignment[i] == 1 || alignment[i] == 2) {
-//                myScore += 1;
-//            } else if(alignment[i] == 3) {
-//                myScore += 1;
-//            }
-//        }
-        int newScore = read->dataLen() - myScore;
-        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
-                          tmp_set.size());
-
-        //free(cigar);
-        if(endLocations) {
-            free(endLocations);
-        }
-        if(startLocations) {
-            free(startLocations);
-        }
-        if(alignment) {
-            free(alignment);
-        }
-        delete (*it);
-    }
-
-    delete reverse_complement;
 
 }
 
@@ -5656,74 +5716,76 @@ void LCSkSolver::findReadPosition(Read* read, bool orientation) {
     read->keepRatio(1.1f);
 
     for (auto it = tmp_set.rbegin(); it != tmp_set.rend(); ++it) {
-        int32_t start = std::max<int32_t>(
-                0, (*it)->start() - 0.545 * read->dataLen());
-        uint32_t end = std::min<uint32_t>(sa()->size() - 1,
-                                          (*it)->end() + 0.2 * read->dataLen());
+            int32_t start = std::max<int32_t>(
+                    0, (*it)->start() - 0.545 * read->dataLen());
+            uint32_t end = std::min<uint32_t>(sa()->size() - 1,
+                                              (*it)->end() + 0.2 * read->dataLen());
 
-        int score, numLocations, alignmentLength;
-        int* startLocations = NULL;
-        int* endLocations = NULL;
-        unsigned char* alignment = NULL;
+            int score, numLocations, alignmentLength;
+            int* startLocations = NULL;
+            int* endLocations = NULL;
+            unsigned char* alignment = NULL;
 
-        if((*it)->isComplement()) {
-            edlibCalcEditDistance(
-                    (const unsigned char *) reverse_complement->data(),
-                    reverse_complement->dataLen(),
-                    (const unsigned char *) (sa()->text() + start),
-                    end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS, ALIGN,
-                    &score, &endLocations, &startLocations, &numLocations,
-                    &alignment, &alignmentLength);
+            if((*it)->isComplement()) {
+                edlibCalcEditDistance(
+                        (const unsigned char *) reverse_complement->data(),
+                        reverse_complement->dataLen(),
+                        (const unsigned char *) (sa()->text() + start),
+                        end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS, ALIGN,
+                        &score, &endLocations, &startLocations, &numLocations,
+                        &alignment, &alignmentLength);
 
-        } else {
-            edlibCalcEditDistance(
-                    (const unsigned char *) read->data(), read->dataLen(),
-                    (const unsigned char *) (sa()->text() + start),
-                    end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS, ALIGN,
-                    &score, &endLocations, &startLocations, &numLocations,
-                    &alignment, &alignmentLength);
+            } else {
+                edlibCalcEditDistance(
+                        (const unsigned char *) read->data(), read->dataLen(),
+                        (const unsigned char *) (sa()->text() + start),
+                        end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS, ALIGN,
+                        &score, &endLocations, &startLocations, &numLocations,
+                        &alignment, &alignmentLength);
+            }
+    //        char* cigar;
+    //        edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_EXTENDED,
+    //                              &cigar);
+            //if(startLocations == NULL || alignment == NULL || alignmentLength == 0) continue;
+           // if(startLocations == NULL) continue;
+    //        start = startLocations[0] + start;
+    //        end = endLocations[0] + start;
+
+            end = read->dataLen() + start;
+
+            //int secondaryScore = (*it)->score();
+            //int newScore = read->dataLen() - score;  // 3 * read->dataLen() - score;
+            //cerr << "BLA " << newScore << endl;
+    //        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
+    //                          tmp_set.size());
+
+            int myScore = score;
+    //        for (int i = 0; i < alignmentLength; ++i) {
+    //            if(alignment[i] == 1 || alignment[i] == 2) {
+    //                myScore += 1;
+    //            } else if(alignment[i] == 3) {
+    //                myScore += 1;
+    //            }
+    //        }
+            int newScore = read->dataLen() - myScore;
+            read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
+                              tmp_set.size());
+
+            //free(cigar);
+            if(endLocations) {
+                free(endLocations);
+            }
+            if(startLocations) {
+                free(startLocations);
+            }
+            if(alignment) {
+                free(alignment);
+            }
+            delete (*it);
         }
 
-        //if(startLocations == NULL) continue;
-//        char* cigar;
-//        edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_STANDARD,
-//                              &cigar);
+        delete reverse_complement;
 
-//        start = startLocations[0] + start;
-//        end = endLocations[0] + start;
-        end = read->dataLen() + start;
-
-        //int secondaryScore = (*it)->score();
-        //int newScore = read->dataLen() - score;  // 3 * read->dataLen() - score;
-        //cerr << "BLA " << newScore << endl;
-        int myScore = score;
-//        for (int i = 0; i < alignmentLength; ++i) {
-//            if(alignment[i] == 1 || alignment[i] == 2) {
-//                myScore += 1;
-//            } else if(alignment[i] == 3) {
-//                myScore += 1;
-//            }
-//        }
-        int newScore = read->dataLen() - myScore;
-//        cerr << "My score" << myScore << "  " << score << endl;
-//        read->addPosition(newScore, start, end, (*it)->isComplement(), cigar,
-//                          strlen(cigar), tmp_set.size());
-        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
-                          tmp_set.size());
-
-        if(endLocations) {
-            free(endLocations);
-        }
-        if(startLocations) {
-            free(startLocations);
-        }
-        if(alignment) {
-            free(alignment);
-        }
-        delete (*it);
-    }
-
-    delete reverse_complement;
 
 }
 
@@ -5771,7 +5833,7 @@ void IncrementalLCSkSolver::fillPositions(Read* read) {
             if(pos.size() >= prev_pos_cnt + minMatchNum_) {
                 // ok, skipamo
                 i = new_i;
-                len = max(kmerK_, new_len);  // dodano da ne nastavljamo s krivim lenom
+                len = new_len; // dodano da ne nastavljamo s krivim lenom
             }
         }
 
@@ -5867,7 +5929,7 @@ uint32_t IncrementalLCSkSolver::getKmerPositions(
 
     int numOfSolutions;
     int len;
-    const int* matches = sa()->iterativeSearch(
+    const int* matches = sa()->iterativeSearchDev(
             read->data() + kmerStart,
             min(MAX_KMER, read->dataLen() - kmerStart - 1), initialLen,
             &numOfSolutions, maxMatchNum_, minMatchNum_, &len);
@@ -6200,8 +6262,11 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 notMapped++;
                 // cerr << "Not mapped [" << i << "]" << endl;
             } else {
-                double sc = read->bestPosition(0)->score() / 150.0 * 0.000;
-                scores.push_back(sc);
+                double sc=  read->bestPosition(0)->score();
+                if(read->positionsSize() == 1 && sc > 147)
+                    scores.push_back(sc / 150.0 * 0.300);
+                else
+                    scores.push_back(0);
             }
 
             fillPositions(read2, seq, tmpOutput);
@@ -6210,8 +6275,11 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 //cerr << "Not mapped [" << i << "]" << endl;
                 notMapped++;
             } else {
-                double sc = read2->bestPosition(0)->score() / 150.0 * 0.000;
-                scores.push_back(sc);
+                double sc=  read2->bestPosition(0)->score();
+                if(read2->positionsSize() == 1 && sc > 147)
+                    scores.push_back(sc / 150.0 * 0.300);
+                else
+                    scores.push_back(0);
             }
 
         } else {
@@ -6223,17 +6291,21 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 int offset = *results.begin();
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
 
-                if(offset < 350 && (p1s.size() == 1 || p2s.size() == 1)) {
+                if(offset < 350 &&(p1s.size() == 1
+                        || p2s.size() == 1)) {
+                    // 100 %
                     scores.push_back(sc * 1.6 / 150.0);
                     scores.push_back(sc * 1.6 / 150.0);
-                } else if(offset < 350) {
+                } else if(offset < 350){
                     scores.push_back(
-                            sc / 150.0 * 1 / (p1s.size() + p2s.size()));
+                            sc / 150.0 * 0.5 / (p1s.size()));
                     scores.push_back(
-                            sc / 150.0 * 1 / (p1s.size() + p2s.size()));
-                } else {
-                    scores.push_back(sc / 150.0 * 0.7 / (p1s.size()));
-                    scores.push_back(sc / 150.0 * 0.7 / (p2s.size()));
+                            sc / 150.0 * 0.5 / ( p2s.size()));
+                }else {
+                    scores.push_back(
+                            sc / 150.0 * 0.35 / (p1s.size()));
+                    scores.push_back(
+                            sc / 150.0 * 0.35 / (p2s.size()));
                 }
             }
 
@@ -6251,16 +6323,16 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 int offset = *results.begin();
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
 
-                if(offset < 350 && sc > 148
-                        && (p1s.size() == 1 || p2s.size() == 1)) {
+                if(offset < 350 && (p1s.size() == 1
+                        || p2s.size() == 1)) {
                     // 100 %
                     scores.push_back(sc * 0.75 / 150.0);
                     scores.push_back(sc * 0.75 / 150.0);
                 } else {
                     scores.push_back(
-                            sc / 150.0 * 1 / (p1s.size() + p2s.size()));
+                            sc / 150.0 * .5 / (p1s.size()));
                     scores.push_back(
-                            sc / 150.0 * 1 / (p1s.size() + p2s.size()));
+                            sc / 150.0 * .5 / ( p2s.size()));
                 }
                 //scores.push_back(ans.first->score() * 0 / (1.0 * normals));
                 //scores.push_back(ans.second->score() * 0 / (1.0 * normals));
@@ -6386,6 +6458,7 @@ vector<ReadResult> build_read_results(const map<string, Position>& truth,
 
     int n = results.size();
     int correct = 0;
+    double max_wrong = 0, min_correct = 1;
     for (int i = 0; i < n; ++i) {
         vector<string> tokens = tokenize(results[i]);
 //cout << results[i] << endl;
@@ -6400,12 +6473,17 @@ vector<ReadResult> build_read_results(const map<string, Position>& truth,
         r = (abs(start0 - start1) < MAX_POSITION_DIST) ? r : 0;
         double confidence = stod(tokens[5]);
         read_results.push_back(ReadResult { confidence, r });
-//        if(!r) {
-//            cerr << "Read " << i << endl;
-//            cerr << "ja " << (start0 - start1) << endl;
-//        }
+        if(!r) {
+           cerr << "Read " << i << endl;
+            cerr << "ja " << confidence << endl;
+            max_wrong = max(max_wrong, confidence);
+        } else {
+            min_correct = min(min_correct, confidence);
+        }
         correct += r;
     }
+    cerr << "Min tocni" << min_correct << endl;
+    cerr << "Max krivi" << max_wrong << endl;
     cerr << "Number of correct answers: " << correct << '/' << n << " = "
          << (double) correct / (double) n << endl;
     return read_results;
