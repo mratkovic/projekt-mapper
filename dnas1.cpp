@@ -6,13 +6,13 @@ using namespace std;
 
 namespace hawker {
 
-const int KMER = 42;
-const int MAX_KMER = 120;
+const int KMER = 52;
+const int MAX_KMER = 144;
 const int LO_CNT = 1;
-const int HI_CNT = 3;
+const int HI_CNT = 5;
 const int THREADS = 1;
-const double KEEP_F = 2.5;
-const int KEEP_NUM = 85;
+const double KEEP_F = 1.8;
+const int KEEP_NUM = 55;
 const int MAX_EDIT = 35;
 
 const bool ALIGN = false;
@@ -25,6 +25,29 @@ const bool FIND_STARTS = false;
 extern "C" {
 #endif
 
+/*
+The MIT License (MIT)
+
+Copyright (c) 2014 Martin Sosic
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+ */
 // Status codes
 #define EDLIB_STATUS_OK 0
 #define EDLIB_STATUS_ERROR 1
@@ -6263,8 +6286,8 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 // cerr << "Not mapped [" << i << "]" << endl;
             } else {
                 double sc=  read->bestPosition(0)->score();
-                if(read->positionsSize() == 1 && sc > 147)
-                    scores.push_back(sc / 150.0 * 0.300);
+                if(read->positionsSize() == 1 && sc >= 149)
+                    scores.push_back(sc / 150.0 * 0.0);
                 else
                     scores.push_back(0);
             }
@@ -6276,8 +6299,8 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 notMapped++;
             } else {
                 double sc=  read2->bestPosition(0)->score();
-                if(read2->positionsSize() == 1 && sc > 147)
-                    scores.push_back(sc / 150.0 * 0.300);
+                if(read2->positionsSize() == 1 && sc >= 149)
+                    scores.push_back(sc / 150.0 * 0.0);
                 else
                     scores.push_back(0);
             }
@@ -6292,7 +6315,7 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
 
                 if(offset < 350 &&(p1s.size() == 1
-                        || p2s.size() == 1)) {
+                        && p2s.size() == 1)) {
                     // 100 %
                     scores.push_back(sc * 1.6 / 150.0);
                     scores.push_back(sc * 1.6 / 150.0);
@@ -6303,9 +6326,9 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                             sc / 150.0 * 0.5 / ( p2s.size()));
                 }else {
                     scores.push_back(
-                            sc / 150.0 * 0.35 / (p1s.size()));
+                            sc / 150.0 * 0.0 / (p1s.size()));
                     scores.push_back(
-                            sc / 150.0 * 0.35 / (p2s.size()));
+                            sc / 150.0 * 0.0 / (p2s.size()));
                 }
             }
 
@@ -6326,13 +6349,13 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 if(offset < 350 && (p1s.size() == 1
                         || p2s.size() == 1)) {
                     // 100 %
-                    scores.push_back(sc * 0.75 / 150.0);
-                    scores.push_back(sc * 0.75 / 150.0);
+                    scores.push_back(sc * 0.35 / 150.0);
+                    scores.push_back(sc * 0.35 / 150.0);
                 } else {
                     scores.push_back(
-                            sc / 150.0 * .5 / (p1s.size()));
+                            sc / 150.0 * .0 / (p1s.size()));
                     scores.push_back(
-                            sc / 150.0 * .5 / ( p2s.size()));
+                            sc / 150.0 * .0 / ( p2s.size()));
                 }
                 //scores.push_back(ans.first->score() * 0 / (1.0 * normals));
                 //scores.push_back(ans.second->score() * 0 / (1.0 * normals));
@@ -6638,6 +6661,6 @@ int test(const int testDifficulty) {
 }
 
 int main() {
-    test(0);
+    test(1);
 }
 #endif
