@@ -6,10 +6,10 @@ using namespace std;
 
 namespace hawker {
 
-const int KMER = 22;
-const int MAX_KMER = 70;
-const int LO_CNT = 2;
-const int HI_CNT = 8;
+const int KMER = 42;
+const int MAX_KMER = 120;
+const int LO_CNT = 1;
+const int HI_CNT = 3;
 const int THREADS = 1;
 const double KEEP_F = 2.5;
 const int KEEP_NUM = 85;
