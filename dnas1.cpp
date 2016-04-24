@@ -6,13 +6,13 @@ using namespace std;
 
 namespace hawker {
 
-const int KMER = 52;
+const int KMER = 61;
 const int MAX_KMER = 144;
 const int LO_CNT = 1;
-const int HI_CNT = 5;
+const int HI_CNT = 2;
 const int THREADS = 1;
 const double KEEP_F = 1.8;
-const int KEEP_NUM = 55;
+const int KEEP_NUM = 35;
 const int MAX_EDIT = 35;
 
 const bool ALIGN = false;
@@ -26,26 +26,26 @@ extern "C" {
 #endif
 
 /*
-The MIT License (MIT)
+ The MIT License (MIT)
 
-Copyright (c) 2014 Martin Sosic
+ Copyright (c) 2014 Martin Sosic
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy of
+ this software and associated documentation files (the "Software"), to deal in
+ the Software without restriction, including without limitation the rights to
+ use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ the Software, and to permit persons to whom the Software is furnished to do so,
+ subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  */
 // Status codes
@@ -317,7 +317,7 @@ int edlibCalcEditDistance(const unsigned char* query, int queryLength,
                     // if it can start with mismatches instead.
                     if(numPositionsSHW != 0) {
                         (*startLocations)[i] = endLocation
-                            - positionsSHW[numPositionsSHW - 1];
+                                - positionsSHW[numPositionsSHW - 1];
                         delete[] positionsSHW;
                     }
                 }
@@ -1517,8 +1517,8 @@ class SuffixArray {
                                int* numOfSolutions, const int solUpperLimit,
                                const int solLowerLimit, int* finalLen);
     const int* iterativeSearchDev(const char* pattern, int length, int startLen,
-                               int* numOfSolutions, const int solUpperLimit,
-                               const int solLowerLimit, int* finalLen);
+                                  int* numOfSolutions, const int solUpperLimit,
+                                  const int solLowerLimit, int* finalLen);
 
     void saveSuffixArray(FILE *out);
 
@@ -1774,7 +1774,9 @@ class LCSkppV2 {
     static uint32_t calcLCSkpp(
             std::vector<std::pair<uint32_t, uint32_t>> &result,
             std::vector<triplet_t<uint32_t>> &elements);
-
+    static uint32_t calcLCSkppDev(
+            std::vector<std::pair<uint32_t, uint32_t>> &result,
+            std::vector<triplet_t<uint32_t>> &elements);
     static uint32_t estimateBeginingPosFromLCSkpp(
             std::vector<std::pair<uint32_t, uint32_t> >& reconstruction);
 
@@ -5024,10 +5026,10 @@ const int* SuffixArray::iterativeSearch(const char* pattern, int length,
 }
 
 const int* SuffixArray::iterativeSearchDev(const char* pattern, int length,
-                                        int startLen, int* numOfSolutions,
-                                        const int solUpperLimit,
-                                        const int solLowerLimit,
-                                        int* finalLen) {
+                                           int startLen, int* numOfSolutions,
+                                           const int solUpperLimit,
+                                           const int solLowerLimit,
+                                           int* finalLen) {
     int firstIndex = -1;
     int prevFirstIndex;
 
@@ -5038,27 +5040,28 @@ const int* SuffixArray::iterativeSearchDev(const char* pattern, int length,
 
     // find upper bound
     int step;
-    for(step = 1; step+startLen < length; step *=2) {
+    for (step = 1; step + startLen < length; step *= 2) {
         prevNumOfSolutions = *numOfSolutions;
         prevFirstIndex = firstIndex;
         *numOfSolutions = sa_search((const sauchar_t *) text_, textLen_,
-                                    (const sauchar_t *) pattern, step + startLen,
-                                    &suffix_array_[0], textLen_, &firstIndex);
+                                    (const sauchar_t *) pattern,
+                                    step + startLen, &suffix_array_[0],
+                                    textLen_, &firstIndex);
         if(*numOfSolutions < solLowerLimit) break;
     }
 
     //
-    int lo = step/2;
+    int lo = step / 2;
     int hi = step;
 
-    for(int i = lo+1; i < hi; ++i) {
+    for (int i = lo + 1; i < hi; ++i) {
         prevNumOfSolutions = *numOfSolutions;
         prevFirstIndex = firstIndex;
         *numOfSolutions = sa_search((const sauchar_t *) text_, textLen_,
                                     (const sauchar_t *) pattern, i + startLen,
                                     &suffix_array_[0], textLen_, &firstIndex);
         if(*numOfSolutions < solLowerLimit) {
-            currentLen = i+startLen;
+            currentLen = i + startLen;
             break;
         }
     }
@@ -5412,6 +5415,89 @@ uint32_t LCSkppV2::calcLCSkpp(
 //    return result.size();
 }
 
+uint32_t LCSkppV2::calcLCSkppDev(
+        std::vector<std::pair<uint32_t, uint32_t>> &result,
+        std::vector<triplet_t<uint32_t>> &elements) {
+
+    if(elements.empty()) {
+        result.clear();
+        return 0;
+    }
+
+    vector<eventK_t> events;
+    events.reserve(2 * elements.size());
+    uint32_t n = 0;
+
+    for (uint32_t i = 0; i < elements.size(); ++i) {
+        triplet_t<uint32_t> element = elements[i];
+
+        uint32_t k = element.third;
+        events.push_back(eventK_t(element.first, element.second, k, true, i));
+        events.push_back(
+                eventK_t(element.first + k, element.second + k, k, false, i));
+
+        n = max(n, element.second + k);
+    }
+    sort(events.begin(), events.end());
+
+    // Indexed by column, first:dp value, second:index in elements
+    Fenwick<pair<uint32_t, uint32_t>> maxColDp(n);
+
+    vector<uint32_t> dp(elements.size());
+    vector<int> continues(elements.size(), -1);
+
+    // find pairs continuing each other
+    vector<triplet_t<uint32_t>>::iterator it;
+    vector<triplet_t<uint32_t>>::iterator prevIt;
+
+    for (it = elements.begin(); it != elements.end(); ++it) {
+        triplet_t<uint32_t> prevElement = triplet_t<uint32_t>(it->first - 1,
+                                                              it->second - 1,
+                                                              0);
+        prevIt = lower_bound(elements.begin(), elements.end(), prevElement);
+        if(prevIt->first == prevElement.first
+                && prevIt->second == prevElement.second) {
+            continues[it - elements.begin()] = prevIt - elements.begin();
+        }
+    }
+
+    uint32_t lcskppLen = 0;
+    uint32_t bestIndex = 0;
+
+    for (auto event = events.begin(); event != events.end(); ++event) {
+        int index = event->index;
+
+        if(event->isStart) {
+            pair<int, int> max = maxColDp.getMax(event->second);
+            dp[index] = event->k;
+
+            if(max.first > 0) {
+                dp[index] = max.first + event->k;
+            }
+
+        } else {
+
+            if(continues[index] != -1) {
+                if(dp[continues[index]] + 1 > dp[index]) {
+                    dp[index] = dp[continues[index]] + 1;
+                }
+            }
+            maxColDp.updateMax(event->second, make_pair(dp[index], index));
+
+            if(dp[index] > lcskppLen) {
+                lcskppLen = dp[index];
+                bestIndex = index;
+            }
+        }
+    }
+    int k = elements[bestIndex].third;
+    int refEndIndex = elements[bestIndex].first + k - 1;
+    int readEndIndex = elements[bestIndex].second + k - 1;
+
+    result.push_back( { refEndIndex - lcskppLen, 0 });
+    return lcskppLen;
+}
+
 void LCSkppV2::reconstructLCSpp(
         vector<triplet_t<uint32_t>> &elements, vector<int> &prevIndex,
         int lastIndex, int lcskLen,
@@ -5627,76 +5713,76 @@ void LCSkSolver::findReadPosition(Read* read) {
     read->keepRatio(1.1f);
 
     for (it = tmp_set.rbegin(); it != tmp_set.rend(); ++it) {
-            int32_t start = std::max<int32_t>(
-                    0, (*it)->start() - 0.545 * read->dataLen());
-            uint32_t end = std::min<uint32_t>(sa()->size() - 1,
-                                              (*it)->end() + 0.2 * read->dataLen());
+        int32_t start = std::max<int32_t>(
+                0, (*it)->start() - 0.545 * read->dataLen());
+        uint32_t end = std::min<uint32_t>(sa()->size() - 1,
+                                          (*it)->end() + 0.2 * read->dataLen());
 
-            int score, numLocations, alignmentLength;
-            int* startLocations = NULL;
-            int* endLocations = NULL;
-            unsigned char* alignment = NULL;
+        int score, numLocations, alignmentLength;
+        int* startLocations = NULL;
+        int* endLocations = NULL;
+        unsigned char* alignment = NULL;
 
-            if((*it)->isComplement()) {
-                edlibCalcEditDistance(
-                        (const unsigned char *) reverse_complement->data(),
-                        reverse_complement->dataLen(),
-                        (const unsigned char *) (sa()->text() + start),
-                        end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS, ALIGN,
-                        &score, &endLocations, &startLocations, &numLocations,
-                        &alignment, &alignmentLength);
+        if((*it)->isComplement()) {
+            edlibCalcEditDistance(
+                    (const unsigned char *) reverse_complement->data(),
+                    reverse_complement->dataLen(),
+                    (const unsigned char *) (sa()->text() + start),
+                    end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS,
+                    ALIGN, &score, &endLocations, &startLocations,
+                    &numLocations, &alignment, &alignmentLength);
 
-            } else {
-                edlibCalcEditDistance(
-                        (const unsigned char *) read->data(), read->dataLen(),
-                        (const unsigned char *) (sa()->text() + start),
-                        end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS, ALIGN,
-                        &score, &endLocations, &startLocations, &numLocations,
-                        &alignment, &alignmentLength);
-            }
-    //        char* cigar;
-    //        edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_EXTENDED,
-    //                              &cigar);
-            //if(startLocations == NULL || alignment == NULL || alignmentLength == 0) continue;
-           // if(startLocations == NULL) continue;
-    //        start = startLocations[0] + start;
-    //        end = endLocations[0] + start;
-
-            end = read->dataLen() + start;
-
-            //int secondaryScore = (*it)->score();
-            //int newScore = read->dataLen() - score;  // 3 * read->dataLen() - score;
-            //cerr << "BLA " << newScore << endl;
-    //        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
-    //                          tmp_set.size());
-
-            int myScore = score;
-    //        for (int i = 0; i < alignmentLength; ++i) {
-    //            if(alignment[i] == 1 || alignment[i] == 2) {
-    //                myScore += 1;
-    //            } else if(alignment[i] == 3) {
-    //                myScore += 1;
-    //            }
-    //        }
-            int newScore = read->dataLen() - myScore;
-            read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
-                              tmp_set.size());
-
-            //free(cigar);
-            if(endLocations) {
-                free(endLocations);
-            }
-            if(startLocations) {
-                free(startLocations);
-            }
-            if(alignment) {
-                free(alignment);
-            }
-            delete (*it);
+        } else {
+            edlibCalcEditDistance(
+                    (const unsigned char *) read->data(), read->dataLen(),
+                    (const unsigned char *) (sa()->text() + start),
+                    end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS,
+                    ALIGN, &score, &endLocations, &startLocations,
+                    &numLocations, &alignment, &alignmentLength);
         }
+        //        char* cigar;
+        //        edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_EXTENDED,
+        //                              &cigar);
+        //if(startLocations == NULL || alignment == NULL || alignmentLength == 0) continue;
+        // if(startLocations == NULL) continue;
+        //        start = startLocations[0] + start;
+        //        end = endLocations[0] + start;
 
-        delete reverse_complement;
+        start = (*it)->start();
+        end = read->dataLen() + start;
 
+        //int secondaryScore = (*it)->score();
+        //int newScore = read->dataLen() - score;  // 3 * read->dataLen() - score;
+        //cerr << "BLA " << newScore << endl;
+        //        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
+        //                          tmp_set.size());
+
+        int myScore = score;
+        //        for (int i = 0; i < alignmentLength; ++i) {
+        //            if(alignment[i] == 1 || alignment[i] == 2) {
+        //                myScore += 1;
+        //            } else if(alignment[i] == 3) {
+        //                myScore += 1;
+        //            }
+        //        }
+        int newScore = read->dataLen() - myScore;
+        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
+                          tmp_set.size());
+
+        //free(cigar);
+        if(endLocations) {
+            free(endLocations);
+        }
+        if(startLocations) {
+            free(startLocations);
+        }
+        if(alignment) {
+            free(alignment);
+        }
+        delete (*it);
+    }
+
+    delete reverse_complement;
 
 }
 
@@ -5739,76 +5825,75 @@ void LCSkSolver::findReadPosition(Read* read, bool orientation) {
     read->keepRatio(1.1f);
 
     for (auto it = tmp_set.rbegin(); it != tmp_set.rend(); ++it) {
-            int32_t start = std::max<int32_t>(
-                    0, (*it)->start() - 0.545 * read->dataLen());
-            uint32_t end = std::min<uint32_t>(sa()->size() - 1,
-                                              (*it)->end() + 0.2 * read->dataLen());
+        int32_t start = std::max<int32_t>(
+                0, (*it)->start() - 0.545 * read->dataLen());
+        uint32_t end = std::min<uint32_t>(sa()->size() - 1,
+                                          (*it)->end() + 0.2 * read->dataLen());
 
-            int score, numLocations, alignmentLength;
-            int* startLocations = NULL;
-            int* endLocations = NULL;
-            unsigned char* alignment = NULL;
+        int score, numLocations, alignmentLength;
+        int* startLocations = NULL;
+        int* endLocations = NULL;
+        unsigned char* alignment = NULL;
 
-            if((*it)->isComplement()) {
-                edlibCalcEditDistance(
-                        (const unsigned char *) reverse_complement->data(),
-                        reverse_complement->dataLen(),
-                        (const unsigned char *) (sa()->text() + start),
-                        end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS, ALIGN,
-                        &score, &endLocations, &startLocations, &numLocations,
-                        &alignment, &alignmentLength);
+        if((*it)->isComplement()) {
+            edlibCalcEditDistance(
+                    (const unsigned char *) reverse_complement->data(),
+                    reverse_complement->dataLen(),
+                    (const unsigned char *) (sa()->text() + start),
+                    end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS,
+                    ALIGN, &score, &endLocations, &startLocations,
+                    &numLocations, &alignment, &alignmentLength);
 
-            } else {
-                edlibCalcEditDistance(
-                        (const unsigned char *) read->data(), read->dataLen(),
-                        (const unsigned char *) (sa()->text() + start),
-                        end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS, ALIGN,
-                        &score, &endLocations, &startLocations, &numLocations,
-                        &alignment, &alignmentLength);
-            }
-    //        char* cigar;
-    //        edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_EXTENDED,
-    //                              &cigar);
-            //if(startLocations == NULL || alignment == NULL || alignmentLength == 0) continue;
-           // if(startLocations == NULL) continue;
-    //        start = startLocations[0] + start;
-    //        end = endLocations[0] + start;
-
-            end = read->dataLen() + start;
-
-            //int secondaryScore = (*it)->score();
-            //int newScore = read->dataLen() - score;  // 3 * read->dataLen() - score;
-            //cerr << "BLA " << newScore << endl;
-    //        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
-    //                          tmp_set.size());
-
-            int myScore = score;
-    //        for (int i = 0; i < alignmentLength; ++i) {
-    //            if(alignment[i] == 1 || alignment[i] == 2) {
-    //                myScore += 1;
-    //            } else if(alignment[i] == 3) {
-    //                myScore += 1;
-    //            }
-    //        }
-            int newScore = read->dataLen() - myScore;
-            read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
-                              tmp_set.size());
-
-            //free(cigar);
-            if(endLocations) {
-                free(endLocations);
-            }
-            if(startLocations) {
-                free(startLocations);
-            }
-            if(alignment) {
-                free(alignment);
-            }
-            delete (*it);
+        } else {
+            edlibCalcEditDistance(
+                    (const unsigned char *) read->data(), read->dataLen(),
+                    (const unsigned char *) (sa()->text() + start),
+                    end - start + 1, 5, MAX_EDIT, EDLIB_MODE_HW, FIND_STARTS,
+                    ALIGN, &score, &endLocations, &startLocations,
+                    &numLocations, &alignment, &alignmentLength);
         }
+        //        char* cigar;
+        //        edlibAlignmentToCigar(alignment, alignmentLength, EDLIB_CIGAR_EXTENDED,
+        //                              &cigar);
+        //if(startLocations == NULL || alignment == NULL || alignmentLength == 0) continue;
+        // if(startLocations == NULL) continue;
+        //        start = startLocations[0] + start;
+        //        end = endLocations[0] + start;
+        start = (*it)->start();
+        end = read->dataLen() + start;
 
-        delete reverse_complement;
+        //int secondaryScore = (*it)->score();
+        //int newScore = read->dataLen() - score;  // 3 * read->dataLen() - score;
+        //cerr << "BLA " << newScore << endl;
+        //        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
+        //                          tmp_set.size());
 
+        int myScore = score;
+        //        for (int i = 0; i < alignmentLength; ++i) {
+        //            if(alignment[i] == 1 || alignment[i] == 2) {
+        //                myScore += 1;
+        //            } else if(alignment[i] == 3) {
+        //                myScore += 1;
+        //            }
+        //        }
+        int newScore = read->dataLen() - myScore;
+        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
+                          tmp_set.size());
+
+        //free(cigar);
+        if(endLocations) {
+            free(endLocations);
+        }
+        if(startLocations) {
+            free(startLocations);
+        }
+        if(alignment) {
+            free(alignment);
+        }
+        delete (*it);
+    }
+
+    delete reverse_complement;
 
 }
 
@@ -5841,6 +5926,9 @@ void IncrementalLCSkSolver::fillPositions(Read* read) {
     assert(read->dataLen() >= kmerK_);
     uint32_t prev_pos_cnt = 0;
     uint32_t len = kmerK_;
+    bool seen[250];
+    memset(seen, 0, 250*sizeof(bool));
+
     for (uint32_t i = kmerK_; i < read->dataLen(); ++i) {
         len = getKmerPositions(read, pos, i - kmerK_, len);
         len = std::max<int>(kmerK_, len);
@@ -5856,7 +5944,7 @@ void IncrementalLCSkSolver::fillPositions(Read* read) {
             if(pos.size() >= prev_pos_cnt + minMatchNum_) {
                 // ok, skipamo
                 i = new_i;
-                len = new_len; // dodano da ne nastavljamo s krivim lenom
+                len = new_len;  // dodano da ne nastavljamo s krivim lenom
             }
         }
 
@@ -5928,7 +6016,7 @@ void IncrementalLCSkSolver::runLCSkpp(int startIndex, int endIndex,
     }
 
     std::vector<std::pair<uint32_t, uint32_t> > result;
-    uint32_t score = LCSkppV2::calcLCSkpp(result, lcsKData);
+    uint32_t score = LCSkppV2::calcLCSkppDev(result, lcsKData);
 
     //result contains pairs (refPos, readPos)
     int len = score;
@@ -6205,7 +6293,7 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
 
     for (int i = 0; i < N; i += 2) {
         //if(i < 898000) continue;
-        //if((i + 2) % 100000 == 0) break;
+       // if((i + 2) % 100000 == 0) break;
         if(i % 5000 == 0) cerr << i << endl;
         // create task for  solving single read
 
@@ -6276,7 +6364,7 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
         }
         //cerr << "Szs " << p1s.size() << "  "  << p2s.size() << endl;
         //cerr << results.size() << endl;
-        if(results.size() == 0 || *results.begin() > 2 * pairsDiff[mode]) {
+        if(results.size() == 0 || *results.begin() > 350) {
             // TODO
 
             fillPositions(read, seq, tmpOutput);
@@ -6285,11 +6373,10 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 notMapped++;
                 // cerr << "Not mapped [" << i << "]" << endl;
             } else {
-                double sc=  read->bestPosition(0)->score();
+                double sc = read->bestPosition(0)->score();
                 if(read->positionsSize() == 1 && sc >= 149)
-                    scores.push_back(sc / 150.0 * 0.0);
-                else
-                    scores.push_back(0);
+                    scores.push_back(sc / 150.0 * 0.001);
+                else scores.push_back(0);
             }
 
             fillPositions(read2, seq, tmpOutput);
@@ -6298,11 +6385,10 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 //cerr << "Not mapped [" << i << "]" << endl;
                 notMapped++;
             } else {
-                double sc=  read2->bestPosition(0)->score();
+                double sc = read2->bestPosition(0)->score();
                 if(read2->positionsSize() == 1 && sc >= 149)
-                    scores.push_back(sc / 150.0 * 0.0);
-                else
-                    scores.push_back(0);
+                    scores.push_back(sc / 150.0 * 0.001);
+                else scores.push_back(0);
             }
 
         } else {
@@ -6313,22 +6399,27 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                         read2->generateMiniSAM(ans.second, 0.99, seq));
                 int offset = *results.begin();
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
-
-                if(offset < 350 &&(p1s.size() == 1
-                        && p2s.size() == 1)) {
+                if(offset < 350 && (p1s.size() == 1 && p2s.size() == 1) && sc > 148) {
                     // 100 %
                     scores.push_back(sc * 1.6 / 150.0);
                     scores.push_back(sc * 1.6 / 150.0);
-                } else if(offset < 350){
-                    scores.push_back(
-                            sc / 150.0 * 0.5 / (p1s.size()));
-                    scores.push_back(
-                            sc / 150.0 * 0.5 / ( p2s.size()));
-                }else {
-                    scores.push_back(
-                            sc / 150.0 * 0.0 / (p1s.size()));
-                    scores.push_back(
-                            sc / 150.0 * 0.0 / (p2s.size()));
+                }
+                else if(offset < 350 && (p1s.size() == 1 && p2s.size() == 1)) {
+                    // 100 %
+                    scores.push_back(sc * 1.4 / 150.0);
+                    scores.push_back(sc * 1.4 / 150.0);
+                } else if(offset < 350
+                        && (p1s.size() == 1 || p2s.size() == 1)) {
+                    // 100 %
+                    scores.push_back(sc * 0.9 / 150.0);
+                    scores.push_back(sc * 0.9 / 150.0);
+
+                } else if(offset < 350) {
+                    scores.push_back(sc / 150.0 * 0.5 / (p1s.size()));
+                    scores.push_back(sc / 150.0 * 0.5 / (p2s.size()));
+                } else {
+                    scores.push_back(sc / 150.0 * 0.0 / (p1s.size()));
+                    scores.push_back(sc / 150.0 * 0.0 / (p2s.size()));
                 }
             }
 
@@ -6346,16 +6437,23 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 int offset = *results.begin();
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
 
-                if(offset < 350 && (p1s.size() == 1
-                        || p2s.size() == 1)) {
+                if(offset < 350 && (p1s.size() == 1 && p2s.size() == 1)) {
                     // 100 %
-                    scores.push_back(sc * 0.35 / 150.0);
-                    scores.push_back(sc * 0.35 / 150.0);
+                    scores.push_back(sc * 0.45 / 150.0);
+                    scores.push_back(sc * 0.45 / 150.0);
+                } else if(offset < 350
+                        && (p1s.size() == 1 || p2s.size() == 1)) {
+                    // 100 %
+                    scores.push_back(sc * 0.44 / 150.0);
+                    scores.push_back(sc * 0.44 / 150.0);
+                } else if(offset < 350
+                        && normals == 1) {
+                    // 100 %
+                    scores.push_back(sc * 0.33 / 150.0);
+                    scores.push_back(sc * 0.33 / 150.0);
                 } else {
-                    scores.push_back(
-                            sc / 150.0 * .0 / (p1s.size()));
-                    scores.push_back(
-                            sc / 150.0 * .0 / ( p2s.size()));
+                    scores.push_back(sc / 150.0 * .0 / (p1s.size()));
+                    scores.push_back(sc / 150.0 * .0 / (p2s.size()));
                 }
                 //scores.push_back(ans.first->score() * 0 / (1.0 * normals));
                 //scores.push_back(ans.second->score() * 0 / (1.0 * normals));
@@ -6380,8 +6478,11 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
     vector<string> out;
     for (int i = 0; i < tmpOutput.size(); ++i) {
         double score = scores[i] / (1.00 * maxiSc);
+//        score = score > 0.10 ? score : 0;
+//        score = score > 0.6 ? score : 0;
+
         //cerr << score << endl;
-        if(score > -1) {
+        if(score > -2) {
             std::snprintf(score_str, sizeof score_str, "%.6f", score);
             out.push_back(tmpOutput[i] + string(score_str));
         }
@@ -6497,7 +6598,7 @@ vector<ReadResult> build_read_results(const map<string, Position>& truth,
         double confidence = stod(tokens[5]);
         read_results.push_back(ReadResult { confidence, r });
         if(!r) {
-           cerr << "Read " << i << endl;
+            cerr << "Read " << i << endl;
             cerr << "ja " << confidence << endl;
             max_wrong = max(max_wrong, confidence);
         } else {
