@@ -10,15 +10,16 @@ const bool LOAD = true;
 const bool SAVE = false;
 const int BREAK_CNT = INT32_MAX;
 
-
-const int KMER = 61;
+const int KMER = 42;
 const int MAX_KMER = 144;
 const int LO_CNT = 1;
 const int HI_CNT = 2;
 const int THREADS = 1;
 const double KEEP_F = 1.8;
-const int KEEP_NUM = 25;
+const int KEEP_NUM = 8;
 const int MAX_EDIT = 35;
+
+const double TRESH = -1;
 
 const bool ALIGN = false;
 const bool FIND_STARTS = false;
@@ -6226,7 +6227,7 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
 
     for (int i = 0; i < N; i += 2) {
         //if(i < 898000) continue;
-        if(i >  hawker::BREAK_CNT) break;
+        if(i > hawker::BREAK_CNT) break;
         if(i % 5000 == 0) cerr << i << endl;
         // create task for  solving single read
 
@@ -6312,10 +6313,8 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 notMapped++;
                 // cerr << "Not mapped [" << i << "]" << endl;
             } else {
-                double sc = read->bestPosition(0)->score();
-                if(read->positionsSize() == 1 && sc >= 149)
-                    scores.push_back(sc / 150.0 * 0.0);
-                else scores.push_back(0);
+                double sc = read->bestPosition(0)->score() / 150.0 * 0.000;
+                scores.push_back(sc);
             }
 
             fillPositions(read2, seq, tmpOutput);
@@ -6324,10 +6323,8 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 //cerr << "Not mapped [" << i << "]" << endl;
                 notMapped++;
             } else {
-                double sc = read2->bestPosition(0)->score();
-                if(read2->positionsSize() == 1 && sc >= 149)
-                    scores.push_back(sc / 150.0 * 0.0);
-                else scores.push_back(0);
+                double sc = read2->bestPosition(0)->score() / 150.0 * 0.000;
+                scores.push_back(sc);
             }
 
         } else {
@@ -6338,17 +6335,22 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                         read2->generateMiniSAM(ans.second, 0.99, seq));
                 int offset = *results.begin();
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
-
-                if(offset < 4 && (p1s.size() == 1 && p2s.size() == 1) && sc > 149) {
+                double f = 1.;
+                if(offset < 350 && sc > 148 && p1s.size() == 1
+                        && p2s.size() == 1) {
                     // 100 %
-                    scores.push_back(sc * 1./(offset+1));
-                    scores.push_back(sc * 1./(offset+1));
+                    scores.push_back(sc * 1.6* f);
+                    scores.push_back(sc * 1.6* f);
                 } else if(offset < 350) {
-                    scores.push_back(sc / 150.0 * 0.0 / (p1s.size()));
-                    scores.push_back(sc / 150.0 * 0.0 / (p2s.size()));
+                    scores.push_back(
+                            sc  * 1.* f / (p1s.size() ));
+                    scores.push_back(
+                            sc * 1.* f / ( p2s.size()));
                 } else {
-                    scores.push_back(sc / 150.0 * 0.0 / (p1s.size()));
-                    scores.push_back(sc / 150.0 * 0.0 / (p2s.size()));
+                    scores.push_back(
+                            sc * 0.0 / (p1s.size() + p2s.size()));
+                    scores.push_back(
+                            sc * 0.0 / (p1s.size() + p2s.size()));
                 }
             }
 
@@ -6364,15 +6366,19 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                         read2->generateMiniSAM(ans.second, 0.99 / normals,
                                                seq));
                 int offset = *results.begin();
+                double f = 1.;
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
 
-                if(offset < 350 && (p1s.size() == 1 || p2s.size() == 1)) {
+                if(offset < 350 && sc > 148
+                        && (p1s.size() == 1 || p2s.size() == 1)) {
                     // 100 %
-                    scores.push_back(sc * 0.0 / 150.0);
-                    scores.push_back(sc * 0.0 / 150.0);
+                    scores.push_back(sc * 0.75 * f );
+                    scores.push_back(sc * 0.75 * f);
                 } else {
-                    scores.push_back(sc / 150.0 * .0 / (p1s.size()));
-                    scores.push_back(sc / 150.0 * .0 / (p2s.size()));
+                    scores.push_back(
+                            sc  * 0. / (p1s.size() + p2s.size()));
+                    scores.push_back(
+                            sc * 0. / (p1s.size() + p2s.size()));
                 }
                 //scores.push_back(ans.first->score() * 0 / (1.0 * normals));
                 //scores.push_back(ans.second->score() * 0 / (1.0 * normals));
@@ -6380,7 +6386,6 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
             }
 
         }
-
 //tmpOutput[0].push_back(read->getReadMiniSAM(seq));
         delete read;
     }
@@ -6398,7 +6403,7 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
     for (int i = 0; i < tmpOutput.size(); ++i) {
         double score = scores[i] / (1.00 * maxiSc);
         //cerr << score << endl;
-        if(score > 0) {
+        if(score > hawker::TRESH) {
             std::snprintf(score_str, sizeof score_str, "%.6f", score);
             out.push_back(tmpOutput[i] + string(score_str));
         }
