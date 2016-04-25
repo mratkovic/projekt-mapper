@@ -6,14 +6,20 @@ using namespace std;
 
 namespace hawker {
 
+const bool LOAD = false;
+const bool SAVE = false;
+const int BREAK_CNT = INT32_MAX;
+
+
 const int KMER = 61;
 const int MAX_KMER = 144;
 const int LO_CNT = 1;
 const int HI_CNT = 2;
 const int THREADS = 1;
 const double KEEP_F = 1.8;
-const int KEEP_NUM = 25;
+const int KEEP_NUM = 35;
 const int MAX_EDIT = 35;
+
 const bool ALIGN = false;
 const bool FIND_STARTS = false;
 
@@ -1773,9 +1779,7 @@ class LCSkppV2 {
     static uint32_t calcLCSkpp(
             std::vector<std::pair<uint32_t, uint32_t>> &result,
             std::vector<triplet_t<uint32_t>> &elements);
-    static uint32_t calcLCSkppDev(
-            std::vector<std::pair<uint32_t, uint32_t>> &result,
-            std::vector<triplet_t<uint32_t>> &elements);
+
     static uint32_t estimateBeginingPosFromLCSkpp(
             std::vector<std::pair<uint32_t, uint32_t> >& reconstruction);
 
@@ -5414,89 +5418,6 @@ uint32_t LCSkppV2::calcLCSkpp(
 //    return result.size();
 }
 
-uint32_t LCSkppV2::calcLCSkppDev(
-        std::vector<std::pair<uint32_t, uint32_t>> &result,
-        std::vector<triplet_t<uint32_t>> &elements) {
-
-    if(elements.empty()) {
-        result.clear();
-        return 0;
-    }
-
-    vector<eventK_t> events;
-    events.reserve(2 * elements.size());
-    uint32_t n = 0;
-
-    for (uint32_t i = 0; i < elements.size(); ++i) {
-        triplet_t<uint32_t> element = elements[i];
-
-        uint32_t k = element.third;
-        events.push_back(eventK_t(element.first, element.second, k, true, i));
-        events.push_back(
-                eventK_t(element.first + k, element.second + k, k, false, i));
-
-        n = max(n, element.second + k);
-    }
-    sort(events.begin(), events.end());
-
-    // Indexed by column, first:dp value, second:index in elements
-    Fenwick<pair<uint32_t, uint32_t>> maxColDp(n);
-
-    vector<uint32_t> dp(elements.size());
-    vector<int> continues(elements.size(), -1);
-
-    // find pairs continuing each other
-    vector<triplet_t<uint32_t>>::iterator it;
-    vector<triplet_t<uint32_t>>::iterator prevIt;
-
-    for (it = elements.begin(); it != elements.end(); ++it) {
-        triplet_t<uint32_t> prevElement = triplet_t<uint32_t>(it->first - 1,
-                                                              it->second - 1,
-                                                              0);
-        prevIt = lower_bound(elements.begin(), elements.end(), prevElement);
-        if(prevIt->first == prevElement.first
-                && prevIt->second == prevElement.second) {
-            continues[it - elements.begin()] = prevIt - elements.begin();
-        }
-    }
-
-    uint32_t lcskppLen = 0;
-    uint32_t bestIndex = 0;
-
-    for (auto event = events.begin(); event != events.end(); ++event) {
-        int index = event->index;
-
-        if(event->isStart) {
-            pair<int, int> max = maxColDp.getMax(event->second);
-            dp[index] = event->k;
-
-            if(max.first > 0) {
-                dp[index] = max.first + event->k;
-            }
-
-        } else {
-
-            if(continues[index] != -1) {
-                if(dp[continues[index]] + 1 > dp[index]) {
-                    dp[index] = dp[continues[index]] + 1;
-                }
-            }
-            maxColDp.updateMax(event->second, make_pair(dp[index], index));
-
-            if(dp[index] > lcskppLen) {
-                lcskppLen = dp[index];
-                bestIndex = index;
-            }
-        }
-    }
-    int k = elements[bestIndex].third;
-    int refEndIndex = elements[bestIndex].first + k - 1;
-    int readEndIndex = elements[bestIndex].second + k - 1;
-
-    result.push_back( { refEndIndex - lcskppLen, 0 });
-    return lcskppLen;
-}
-
 void LCSkppV2::reconstructLCSpp(
         vector<triplet_t<uint32_t>> &elements, vector<int> &prevIndex,
         int lastIndex, int lcskLen,
@@ -5747,7 +5668,6 @@ void LCSkSolver::findReadPosition(Read* read) {
         //        start = startLocations[0] + start;
         //        end = endLocations[0] + start;
 
-        start = (*it)->start();
         end = read->dataLen() + start;
 
         //int secondaryScore = (*it)->score();
@@ -5858,7 +5778,7 @@ void LCSkSolver::findReadPosition(Read* read, bool orientation) {
         // if(startLocations == NULL) continue;
         //        start = startLocations[0] + start;
         //        end = endLocations[0] + start;
-        start = (*it)->start();
+
         end = read->dataLen() + start;
 
         //int secondaryScore = (*it)->score();
@@ -5925,9 +5845,6 @@ void IncrementalLCSkSolver::fillPositions(Read* read) {
     assert(read->dataLen() >= kmerK_);
     uint32_t prev_pos_cnt = 0;
     uint32_t len = kmerK_;
-    bool seen[250];
-    memset(seen, 0, 250*sizeof(bool));
-
     for (uint32_t i = kmerK_; i < read->dataLen(); ++i) {
         len = getKmerPositions(read, pos, i - kmerK_, len);
         len = std::max<int>(kmerK_, len);
@@ -6015,7 +5932,7 @@ void IncrementalLCSkSolver::runLCSkpp(int startIndex, int endIndex,
     }
 
     std::vector<std::pair<uint32_t, uint32_t> > result;
-    uint32_t score = LCSkppV2::calcLCSkppDev(result, lcsKData);
+    uint32_t score = LCSkppV2::calcLCSkpp(result, lcsKData);
 
     //result contains pairs (refPos, readPos)
     int len = score;
@@ -6232,15 +6149,23 @@ int DNASequencing::preProcessing() {
 
     seq->allBasesToSmallInt();
 
-    string path = "/media/bio_disk/tc_dna1/demo/" + to_string(mode) +  ".suffa";
-//    sa = new hawker::SuffixArray(seq->data(), seq->dataLen());
-//    FILE* fl = fopen(path.c_str(), "wb");
-//    sa->saveSuffixArray(fl);
-//    fclose(fl);
+    // TODO LOAD-SAVE SA
+    string path = "/media/bio_disk/tc_dna1/demo/" + to_string(mode) + ".suffa";
 
-    FILE* fl = fopen(path.c_str(), "rb");
-    sa = new hawker::SuffixArray(fl, seq->data(), seq->dataLen());
-    fclose(fl);
+    if(hawker::SAVE) {
+        sa = new hawker::SuffixArray(seq->data(), seq->dataLen());
+        cerr << "\tSTORE idx" << endl;
+        FILE* fl = fopen(path.c_str(), "wb");
+        sa->saveSuffixArray(fl);
+        fclose(fl);
+    } else if(hawker::LOAD) {
+        cerr << "\tLOAD idx" << endl;
+        FILE* fl = fopen(path.c_str(), "rb");
+        sa = new hawker::SuffixArray(fl, seq->data(), seq->dataLen());
+        fclose(fl);
+    } else {
+        sa = new hawker::SuffixArray(seq->data(), seq->dataLen());
+    }
 
     solver = new hawker::IncrementalLCSkSolver(seq);
     //solver = new hawker::LCSkSolver(seq);
@@ -6301,7 +6226,7 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
 
     for (int i = 0; i < N; i += 2) {
         //if(i < 898000) continue;
-       // if((i + 2) % 100000 == 0) break;
+        if(i >  hawker::BREAK_CNT) break;
         if(i % 5000 == 0) cerr << i << endl;
         // create task for  solving single read
 
@@ -6357,7 +6282,13 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 if(p1->isComplement() == p2->isComplement()) continue;
                 long start1 = p1->start();
                 long start2 = p2->start();
-                long diff = abs(start2 - start1);
+                long diff = start1 - start2;
+
+                // NOVO: + pa - ide uvik
+                diff = diff * (p1->isComplement() ? 1 : -1);
+                if(diff < 0) continue;
+                //diff =abs(diff);
+
                 long offset = abs(pairsDiff[mode] - diff);
                 if(diff < pairsDiff[mode] && diff < 150) {
                     offset += 450;
@@ -6372,7 +6303,7 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
         }
         //cerr << "Szs " << p1s.size() << "  "  << p2s.size() << endl;
         //cerr << results.size() << endl;
-        if(results.size() == 0 || *results.begin() > 350) {
+        if(results.size() == 0 || *results.begin() > 2 * pairsDiff[mode]) {
             // TODO
 
             fillPositions(read, seq, tmpOutput);
@@ -6383,7 +6314,7 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
             } else {
                 double sc = read->bestPosition(0)->score();
                 if(read->positionsSize() == 1 && sc >= 149)
-                    scores.push_back(sc / 150.0 * 0.00);
+                    scores.push_back(sc / 150.0 * 0.0);
                 else scores.push_back(0);
             }
 
@@ -6395,7 +6326,7 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
             } else {
                 double sc = read2->bestPosition(0)->score();
                 if(read2->positionsSize() == 1 && sc >= 149)
-                    scores.push_back(sc / 150.0 * 0.00);
+                    scores.push_back(sc / 150.0 * 0.0);
                 else scores.push_back(0);
             }
 
@@ -6407,29 +6338,17 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                         read2->generateMiniSAM(ans.second, 0.99, seq));
                 int offset = *results.begin();
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
-                if(offset < 350 && (p1s.size() == 1 && p2s.size() == 1) && sc== 150) {
+
+                if(offset < 350 && (p1s.size() == 1 && p2s.size() == 1)) {
                     // 100 %
                     scores.push_back(sc * 1.6 / 150.0);
                     scores.push_back(sc * 1.6 / 150.0);
-                }
-                else if(offset < 225
-                        && (p1s.size() == 1 || p2s.size() == 1) && sc == 150) {
-                    // 100 %
-                    scores.push_back(sc * 0.9 / 150.0);
-                    scores.push_back(sc * 0.9 / 150.0);
-
-                }else if(offset < 350
-                        && (p1s.size() == 1 || p2s.size() == 1) && sc < 142) {
-                    // 100 %
-                    scores.push_back(sc * 0.0 / 150.0);
-                    scores.push_back(sc * 0.0 / 150.0);
-
                 } else if(offset < 350) {
-                    scores.push_back(sc / 150.0 * 0.0 / (p1s.size()));
-                    scores.push_back(sc / 150.0 * 0.0 / (p2s.size()));
+                    scores.push_back(sc / 150.0 * 0.5 / (p1s.size()));
+                    scores.push_back(sc / 150.0 * 0.5 / (p2s.size()));
                 } else {
-                    scores.push_back(sc / 150.0 * 0.0 / (p1s.size()));
-                    scores.push_back(sc / 150.0 * 0.0 / (p2s.size()));
+                    scores.push_back(sc / 150.0 * 0.11 / (p1s.size()));
+                    scores.push_back(sc / 150.0 * 0.11 / (p2s.size()));
                 }
             }
 
@@ -6447,28 +6366,13 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 int offset = *results.begin();
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
 
-                if(offset < 350 && (p1s.size() == 1 && p2s.size() == 1) && sc == 150) {
+                if(offset < 350 && (p1s.size() == 1 || p2s.size() == 1)) {
                     // 100 %
-                    scores.push_back(sc * 0.0 / 150.0);
-                    scores.push_back(sc * 0.0 / 150.0);
-                } else if(offset < 350
-                        && (p1s.size() == 1 || p2s.size() == 1) && sc == 150) {
-                    // 100 %
-                    scores.push_back(sc * 0.0 / 150.0);
-                    scores.push_back(sc * 0.0 / 150.0);
-                }else if(offset < 350
-                        && (p1s.size() == 1 || p2s.size() == 1) && sc < 142) {
-                    // 100 %
-                    scores.push_back(sc * 0.0 / 150.0);
-                    scores.push_back(sc * 0.0 / 150.0);
-                } else if(offset < 350
-                        && normals == 1) {
-                    // 100 %
-                    scores.push_back(sc * 0.0 / 150.0);
-                    scores.push_back(sc * 0.0 / 150.0);
+                    scores.push_back(sc * 0.35 / 150.0);
+                    scores.push_back(sc * 0.35 / 150.0);
                 } else {
-                    scores.push_back(sc / 150.0 * .0 / (p1s.size()));
-                    scores.push_back(sc / 150.0 * .0 / (p2s.size()));
+                    scores.push_back(sc / 150.0 * .1 / (p1s.size()));
+                    scores.push_back(sc / 150.0 * .1 / (p2s.size()));
                 }
                 //scores.push_back(ans.first->score() * 0 / (1.0 * normals));
                 //scores.push_back(ans.second->score() * 0 / (1.0 * normals));
@@ -6493,11 +6397,8 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
     vector<string> out;
     for (int i = 0; i < tmpOutput.size(); ++i) {
         double score = scores[i] / (1.00 * maxiSc);
-        score = score > 0.21 ? score : 0;
-//        score = score > 0.6 ? score : 0;
-
         //cerr << score << endl;
-        if(score > 0) {
+        if(score > -1) {
             std::snprintf(score_str, sizeof score_str, "%.6f", score);
             out.push_back(tmpOutput[i] + string(score_str));
         }
@@ -6615,9 +6516,12 @@ vector<ReadResult> build_read_results(const map<string, Position>& truth,
         read_results.push_back(ReadResult { confidence, r });
         if(!r) {
             if(abs(start0 - start1) < 1250) {
-            cerr << "Read " << i << endl;
-            cerr << "ja " << confidence << "; delta" << start0 - start1 << "; "  << endl;
-            }max_wrong = max(max_wrong, confidence);
+                cerr << "Read " << i << endl;
+
+                cerr << "ja " << confidence << "; delta" << start0 - start1
+                     << "; " << endl;
+            }
+            max_wrong = max(max_wrong, confidence);
         } else {
             min_correct = min(min_correct, confidence);
         }
@@ -6781,7 +6685,7 @@ int test(const int testDifficulty) {
 int main(int argc, char** argv) {
     int mode = 0;
     if(argc > 1) {
-        mode =atoi(argv[1]);
+        mode = atoi(argv[1]);
         if(argc > 2) {
             TEST_NUM = string(argv[2]);
         }
