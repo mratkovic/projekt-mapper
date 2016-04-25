@@ -10,16 +10,16 @@ const bool LOAD = true;
 const bool SAVE = false;
 const int BREAK_CNT = INT32_MAX;
 
-const int KMER = 52;
+const int KMER = 57;
 const int MAX_KMER = 144;
 const int LO_CNT = 1;
 const int HI_CNT = 1;
 const int THREADS = 1;
 const double KEEP_F = 1.8;
-const int KEEP_NUM = 8;
+const int KEEP_NUM = 6;
 const int MAX_EDIT = 35;
 
-const double TRESH = -1;
+const double TRESH = 0;
 
 const bool ALIGN = false;
 const bool FIND_STARTS = false;
@@ -6336,16 +6336,27 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 int offset = *results.begin();
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
                 double f = 1.;
-                if(offset < 350 && sc > 148 && p1s.size() == 1
+                if(offset < 150 && sc > 149 && p1s.size() == 1
                         && p2s.size() == 1) {
                     // 100 %
-                    scores.push_back(sc * 1.6* f);
-                    scores.push_back(sc * 1.6* f);
-                } else if(offset < 350) {
+                    scores.push_back(150 * 1.6* f);
+                    scores.push_back(150 * 1.6* f);
+
+                } else if(offset < 350 && sc > 148 && p1s.size() == 1
+                        && p2s.size() == 1) {
+                    // 100 %
+                    scores.push_back(150 * 1.2* f);
+                    scores.push_back(150 * 1.2* f);
+                }else if(offset < 350 && sc > 146 && p1s.size() == 1
+                        && p2s.size() == 1) {
+                    // 100 %
+                    scores.push_back(sc * 0* f);
+                    scores.push_back(sc * 0* f);
+                }  else if(offset < 450) {
                     scores.push_back(
-                            sc  * 1.* f / (p1s.size() ));
+                            sc  * 0.* f / (p1s.size() ));
                     scores.push_back(
-                            sc * 1.* f / ( p2s.size()));
+                            sc * 0.* f / ( p2s.size()));
                 } else {
                     scores.push_back(
                             sc * 0.0 / (p1s.size() + p2s.size()));
@@ -6369,12 +6380,17 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 double f = 1.;
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
 
-                if(offset < 350 && sc > 148
+                if(offset < 150 && sc > 148
                         && (p1s.size() == 1 || p2s.size() == 1)) {
                     // 100 %
-                    scores.push_back(sc * 0.75 * f );
-                    scores.push_back(sc * 0.75 * f);
-                } else {
+                    scores.push_back(sc * 0.0 * f );
+                    scores.push_back(sc * 0.0 * f);
+                } else if(offset < 350 && sc > 148
+                        && (p1s.size() == 1 || p2s.size() == 1)) {
+                    // 100 %
+                    scores.push_back(sc * 0.0 * f );
+                    scores.push_back(sc * 0.0 * f);
+                } else{
                     scores.push_back(
                             sc  * 0. / (p1s.size() + p2s.size()));
                     scores.push_back(
