@@ -10,10 +10,10 @@ const bool LOAD = true;
 const bool SAVE = false;
 const int BREAK_CNT = INT32_MAX;
 
-const int KMER = 42;
+const int KMER = 52;
 const int MAX_KMER = 144;
 const int LO_CNT = 1;
-const int HI_CNT = 2;
+const int HI_CNT = 1;
 const int THREADS = 1;
 const double KEEP_F = 1.8;
 const int KEEP_NUM = 8;
