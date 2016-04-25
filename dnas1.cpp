@@ -12,9 +12,8 @@ const int LO_CNT = 1;
 const int HI_CNT = 2;
 const int THREADS = 1;
 const double KEEP_F = 1.8;
-const int KEEP_NUM = 35;
+const int KEEP_NUM = 25;
 const int MAX_EDIT = 35;
-
 const bool ALIGN = false;
 const bool FIND_STARTS = false;
 
@@ -6232,7 +6231,16 @@ int DNASequencing::preProcessing() {
     }
 
     seq->allBasesToSmallInt();
-    sa = new hawker::SuffixArray(seq->data(), seq->dataLen());
+
+    string path = "/media/bio_disk/tc_dna1/demo/" + to_string(mode) +  ".suffa";
+//    sa = new hawker::SuffixArray(seq->data(), seq->dataLen());
+//    FILE* fl = fopen(path.c_str(), "wb");
+//    sa->saveSuffixArray(fl);
+//    fclose(fl);
+
+    FILE* fl = fopen(path.c_str(), "rb");
+    sa = new hawker::SuffixArray(fl, seq->data(), seq->dataLen());
+    fclose(fl);
 
     solver = new hawker::IncrementalLCSkSolver(seq);
     //solver = new hawker::LCSkSolver(seq);
@@ -6375,7 +6383,7 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
             } else {
                 double sc = read->bestPosition(0)->score();
                 if(read->positionsSize() == 1 && sc >= 149)
-                    scores.push_back(sc / 150.0 * 0.001);
+                    scores.push_back(sc / 150.0 * 0.00);
                 else scores.push_back(0);
             }
 
@@ -6387,7 +6395,7 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
             } else {
                 double sc = read2->bestPosition(0)->score();
                 if(read2->positionsSize() == 1 && sc >= 149)
-                    scores.push_back(sc / 150.0 * 0.001);
+                    scores.push_back(sc / 150.0 * 0.00);
                 else scores.push_back(0);
             }
 
@@ -6399,24 +6407,26 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                         read2->generateMiniSAM(ans.second, 0.99, seq));
                 int offset = *results.begin();
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
-                if(offset < 350 && (p1s.size() == 1 && p2s.size() == 1) && sc > 148) {
+                if(offset < 350 && (p1s.size() == 1 && p2s.size() == 1) && sc== 150) {
                     // 100 %
                     scores.push_back(sc * 1.6 / 150.0);
                     scores.push_back(sc * 1.6 / 150.0);
                 }
-                else if(offset < 350 && (p1s.size() == 1 && p2s.size() == 1)) {
-                    // 100 %
-                    scores.push_back(sc * 1.4 / 150.0);
-                    scores.push_back(sc * 1.4 / 150.0);
-                } else if(offset < 350
-                        && (p1s.size() == 1 || p2s.size() == 1)) {
+                else if(offset < 225
+                        && (p1s.size() == 1 || p2s.size() == 1) && sc == 150) {
                     // 100 %
                     scores.push_back(sc * 0.9 / 150.0);
                     scores.push_back(sc * 0.9 / 150.0);
 
+                }else if(offset < 350
+                        && (p1s.size() == 1 || p2s.size() == 1) && sc < 142) {
+                    // 100 %
+                    scores.push_back(sc * 0.0 / 150.0);
+                    scores.push_back(sc * 0.0 / 150.0);
+
                 } else if(offset < 350) {
-                    scores.push_back(sc / 150.0 * 0.5 / (p1s.size()));
-                    scores.push_back(sc / 150.0 * 0.5 / (p2s.size()));
+                    scores.push_back(sc / 150.0 * 0.0 / (p1s.size()));
+                    scores.push_back(sc / 150.0 * 0.0 / (p2s.size()));
                 } else {
                     scores.push_back(sc / 150.0 * 0.0 / (p1s.size()));
                     scores.push_back(sc / 150.0 * 0.0 / (p2s.size()));
@@ -6437,20 +6447,25 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 int offset = *results.begin();
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
 
-                if(offset < 350 && (p1s.size() == 1 && p2s.size() == 1)) {
+                if(offset < 350 && (p1s.size() == 1 && p2s.size() == 1) && sc == 150) {
                     // 100 %
-                    scores.push_back(sc * 0.45 / 150.0);
-                    scores.push_back(sc * 0.45 / 150.0);
+                    scores.push_back(sc * 0.0 / 150.0);
+                    scores.push_back(sc * 0.0 / 150.0);
                 } else if(offset < 350
-                        && (p1s.size() == 1 || p2s.size() == 1)) {
+                        && (p1s.size() == 1 || p2s.size() == 1) && sc == 150) {
                     // 100 %
-                    scores.push_back(sc * 0.44 / 150.0);
-                    scores.push_back(sc * 0.44 / 150.0);
+                    scores.push_back(sc * 0.0 / 150.0);
+                    scores.push_back(sc * 0.0 / 150.0);
+                }else if(offset < 350
+                        && (p1s.size() == 1 || p2s.size() == 1) && sc < 142) {
+                    // 100 %
+                    scores.push_back(sc * 0.0 / 150.0);
+                    scores.push_back(sc * 0.0 / 150.0);
                 } else if(offset < 350
                         && normals == 1) {
                     // 100 %
-                    scores.push_back(sc * 0.33 / 150.0);
-                    scores.push_back(sc * 0.33 / 150.0);
+                    scores.push_back(sc * 0.0 / 150.0);
+                    scores.push_back(sc * 0.0 / 150.0);
                 } else {
                     scores.push_back(sc / 150.0 * .0 / (p1s.size()));
                     scores.push_back(sc / 150.0 * .0 / (p2s.size()));
@@ -6478,11 +6493,11 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
     vector<string> out;
     for (int i = 0; i < tmpOutput.size(); ++i) {
         double score = scores[i] / (1.00 * maxiSc);
-//        score = score > 0.10 ? score : 0;
+        score = score > 0.21 ? score : 0;
 //        score = score > 0.6 ? score : 0;
 
         //cerr << score << endl;
-        if(score > -2) {
+        if(score > 0) {
             std::snprintf(score_str, sizeof score_str, "%.6f", score);
             out.push_back(tmpOutput[i] + string(score_str));
         }
@@ -6497,7 +6512,8 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
 
 #ifdef LOCAL_ONLY
 
-#define PATH string("/media/bio_disk/tc_dna1")
+string PATH = string("/media/bio_disk/tc_dna1");
+string TEST_NUM = to_string(5);
 
 /**
  * Constants from the problem statement
@@ -6598,9 +6614,10 @@ vector<ReadResult> build_read_results(const map<string, Position>& truth,
         double confidence = stod(tokens[5]);
         read_results.push_back(ReadResult { confidence, r });
         if(!r) {
+            if(abs(start0 - start1) < 1250) {
             cerr << "Read " << i << endl;
-            cerr << "ja " << confidence << endl;
-            max_wrong = max(max_wrong, confidence);
+            cerr << "ja " << confidence << "; delta" << start0 - start1 << "; "  << endl;
+            }max_wrong = max(max_wrong, confidence);
         } else {
             min_correct = min(min_correct, confidence);
         }
@@ -6673,16 +6690,16 @@ vector<string> perform_test(int testDifficulty, double norm_a) {
     string fa1_path, fa2_path;
     vector<int> chr_ids;
     if(testDifficulty == 0) {
-        fa1_path = PATH + "/data/small5.fa1";
-        fa2_path = PATH + "/data/small5.fa2";
+        fa1_path = PATH + "/data/small" + TEST_NUM + ".fa1";
+        fa2_path = PATH + "/data/small" + TEST_NUM + ".fa2";
         chr_ids = vector<int> { 20 };
     } else if(testDifficulty == 1) {
-        fa1_path = PATH + "/data/medium5.fa1";
-        fa2_path = PATH + "/data/medium5.fa2";
+        fa1_path = PATH + "/data/medium" + TEST_NUM + ".fa1";
+        fa2_path = PATH + "/data/medium" + TEST_NUM + ".fa2";
         chr_ids = vector<int> { 1, 11, 20 };
     } else if(testDifficulty == 2) {
-        fa1_path = PATH + "/data/large5.fa1";
-        fa2_path = PATH + "/data/large5.fa2";
+        fa1_path = PATH + "/data/large" + TEST_NUM + ".fa1";
+        fa2_path = PATH + "/data/large" + TEST_NUM + ".fa2";
         for (int i = 1; i <= 24; ++i)
             chr_ids.push_back(i);
     }
@@ -6740,13 +6757,13 @@ int test(const int testDifficulty) {
     string minisam_path;
     double norm_a;
     if(testDifficulty == 0) {
-        minisam_path = PATH + "/data/small5.minisam";
+        minisam_path = PATH + "/data/small" + TEST_NUM + ".minisam";
         norm_a = NORM_A_SMALL;
     } else if(testDifficulty == 1) {
-        minisam_path = PATH + "/data/medium5.minisam";
+        minisam_path = PATH + "/data/medium" + TEST_NUM + ".minisam";
         norm_a = NORM_A_MEDIUM;
     } else if(testDifficulty == 2) {
-        minisam_path = PATH + "/data/large5.minisam";
+        minisam_path = PATH + "/data/large" + TEST_NUM + ".minisam";
         norm_a = NORM_A_LARGE;
     }
     // perform test
@@ -6761,7 +6778,14 @@ int test(const int testDifficulty) {
     return 0;
 }
 
-int main() {
-    test(1);
+int main(int argc, char** argv) {
+    int mode = 0;
+    if(argc > 1) {
+        mode =atoi(argv[1]);
+        if(argc > 2) {
+            TEST_NUM = string(argv[2]);
+        }
+    }
+    test(mode);
 }
 #endif
