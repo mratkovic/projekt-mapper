@@ -10,13 +10,13 @@ const bool LOAD = true;
 const bool SAVE = false;
 const int BREAK_CNT = INT32_MAX;
 
-const int KMER = 57;
+const int KMER = 55;
 const int MAX_KMER = 144;
 const int LO_CNT = 1;
 const int HI_CNT = 1;
 const int THREADS = 1;
-const double KEEP_F = 1.8;
-const int KEEP_NUM = 6;
+const double KEEP_F = 2.8;
+const int KEEP_NUM = 12;
 const int MAX_EDIT = 35;
 
 const double TRESH = 0;
@@ -1575,14 +1575,11 @@ class Position {
 
     const char* cigar();bool operator <(const Position &other) const {
         if(score_ != other.score()) {
-            return score_ <= other.score();
-        }
-
-        if(secondary_score_ != other.secondaryScore()) {
-            return secondary_score_ <= other.secondaryScore();
+            return score_ < other.score();
         }
 
         if(abs(start_ - other.start()) > 20) {
+            // iste pozicije ako su +- 20
             return start_ - other.start();
 
         }
@@ -1713,6 +1710,9 @@ class Read {
 
     float keepRatio_;
     uint32_t maxPositions_;
+
+    uint32_t kmerCnt[2] = {0, 0};
+    uint32_t kmerTotalLen[2] = {0, 0};
 
 };
 
@@ -2010,6 +2010,9 @@ void Position::start(uint32_t start) {
 
 void Position::score(uint32_t score) {
     score_ = score;
+}
+void Position::secondaryScore(uint32_t sscore) {
+    secondary_score_ = sscore;
 }
 
 const char* Position::cigar() {
@@ -5510,11 +5513,10 @@ void LCSkSolver::readSuffixArrayFromFile(const char* saInPath) {
 void LCSkSolver::fillPositions(Read* read) {
     std::vector<std::pair<uint32_t, uint32_t> > pos;
     assert(read->dataLen() >= kmerK_);
-
     for (uint32_t i = kmerK_; i < read->dataLen(); ++i) {
         getKmerPositions(read, pos, i - kmerK_);
     }
-
+    double kmer_avg = 0;
     std::sort(pos.begin(), pos.end());
     if(pos.size() == 0) {
         return;
@@ -5611,9 +5613,11 @@ void LCSkSolver::findReadPosition(Read* read) {
     Position* p = read->bestPosition(0);
     if(p) {
         reverse_complement->addPosition(p->score(), p->start(), p->end(),
-                                        p->isComplement());
+                                        p->isComplement(), NULL, 0, p->secondaryScore());
     }
     fillPositions(reverse_complement);
+    read->kmerCnt[1] = reverse_complement->kmerCnt[0];
+    read->kmerTotalLen[1] = reverse_complement->kmerTotalLen[0];
 
     std::multiset<Position*, ptr_compare<Position> >::reverse_iterator it =
             reverse_complement->positions().rbegin();
@@ -5626,7 +5630,7 @@ void LCSkSolver::findReadPosition(Read* read) {
         }
 
         it->setComplement(true);
-        read->addPosition(it->score(), it->start(), it->end(), true);
+        read->addPosition(it->score(), it->start(), it->end(), true, NULL, 0, it->secondaryScore());
     }
 
     std::set<Position*, ptr_compare<Position> > tmp_set = read->positions();
@@ -5687,7 +5691,7 @@ void LCSkSolver::findReadPosition(Read* read) {
         //        }
         int newScore = read->dataLen() - myScore;
         read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
-                          tmp_set.size());
+                          (*it)->secondaryScore());
 
         //free(cigar);
         if(endLocations) {
@@ -5720,7 +5724,8 @@ void LCSkSolver::findReadPosition(Read* read, bool orientation) {
     Position* p = read->bestPosition(0);
     if(p && !orientation) {
         reverse_complement->addPosition(p->score(), p->start(), p->end(),
-                                        p->isComplement());
+                                        p->isComplement(), NULL, 0, p->secondaryScore());
+
     }
     if(!orientation) {
         fillPositions(reverse_complement);
@@ -5736,8 +5741,10 @@ void LCSkSolver::findReadPosition(Read* read, bool orientation) {
             }
 
             it->setComplement(true);
-            read->addPosition(it->score(), it->start(), it->end(), true);
+            read->addPosition(it->score(), it->start(), it->end(), true, NULL, 0, it->secondaryScore());
         }
+        read->kmerCnt[1] = reverse_complement->kmerCnt[0];
+        read->kmerTotalLen[1] = reverse_complement->kmerTotalLen[0];
     }
 
     std::set<Position*, ptr_compare<Position> > tmp_set = read->positions();
@@ -5797,9 +5804,7 @@ void LCSkSolver::findReadPosition(Read* read, bool orientation) {
         //            }
         //        }
         int newScore = read->dataLen() - myScore;
-        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
-                          tmp_set.size());
-
+        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0, (*it)->secondaryScore());
         //free(cigar);
         if(endLocations) {
             free(endLocations);
@@ -5846,9 +5851,14 @@ void IncrementalLCSkSolver::fillPositions(Read* read) {
     assert(read->dataLen() >= kmerK_);
     uint32_t prev_pos_cnt = 0;
     uint32_t len = kmerK_;
+
+    uint32_t tot_len = 0;
+    uint32_t kmer_cnt = 0;
     for (uint32_t i = kmerK_; i < read->dataLen(); ++i) {
         len = getKmerPositions(read, pos, i - kmerK_, len);
         len = std::max<int>(kmerK_, len);
+        tot_len += len;
+        kmer_cnt++;
         // nastavi s zavrsnom duzinom - 2
 
         if(pos.size() > prev_pos_cnt && i < read->dataLen()) {
@@ -5858,7 +5868,10 @@ void IncrementalLCSkSolver::fillPositions(Read* read) {
                                                 kmerK_);
             new_len = std::max<int>(kmerK_, new_len);
 
+
             if(pos.size() >= prev_pos_cnt + minMatchNum_) {
+                tot_len += new_len;
+                kmer_cnt++;
                 // ok, skipamo
                 i = new_i;
                 len = new_len;  // dodano da ne nastavljamo s krivim lenom
@@ -5867,7 +5880,7 @@ void IncrementalLCSkSolver::fillPositions(Read* read) {
 
         prev_pos_cnt = pos.size();
     }
-
+    //cerr << "AVG: " << avg_kmer/kmer_cnt << "; cnt " << kmer_cnt << endl;
     std::sort(pos.begin(), pos.end());
     if(pos.size() == 0) {
         return;
@@ -5903,6 +5916,8 @@ void IncrementalLCSkSolver::fillPositions(Read* read) {
         }
 
     }
+    read->kmerCnt[0] = kmer_cnt;
+    read->kmerTotalLen[0] = tot_len;
 }
 
 void IncrementalLCSkSolver::runLCSkpp(int startIndex, int endIndex,
@@ -6339,6 +6354,13 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 if(offset < 150 && sc > 149 && p1s.size() == 1
                         && p2s.size() == 1) {
                     // 100 %
+//                    cerr << read->kmerCnt[0] << "; "  <<  read->kmerTotalLen[0]<< endl;
+//                    cerr << read->kmerCnt[1] << "; "  <<  read->kmerTotalLen[1]<< endl;
+//
+//                    cerr << read2->kmerCnt[0] << "; "  <<  read2->kmerTotalLen[0]<< endl;
+//                    cerr << read2->kmerCnt[1] << "; "  <<  read2->kmerTotalLen[1]<< endl;
+//
+//                    cerr << ans.first ->isComplement() << "; "  << ans.second->isComplement() << endl << endl;;
                     scores.push_back(150 * 1.6* f);
                     scores.push_back(150 * 1.6* f);
 
@@ -6519,6 +6541,8 @@ vector<ReadResult> build_read_results(const map<string, Position>& truth,
     ;
 
     int n = results.size();
+    int cmpl_cnt = 0;
+    int pos_cnt = 0;
     int correct = 0;
     double max_wrong = 0, min_correct = 1;
     for (int i = 0; i < n; ++i) {
@@ -6536,6 +6560,11 @@ vector<ReadResult> build_read_results(const map<string, Position>& truth,
         double confidence = stod(tokens[5]);
         read_results.push_back(ReadResult { confidence, r });
         if(!r) {
+            if(tokens[4][0] == '+') {
+                pos_cnt++;
+            } else {
+                cmpl_cnt++;
+            }
             if(abs(start0 - start1) < 1250) {
                 cerr << "Read " << i << endl;
 
@@ -6549,6 +6578,7 @@ vector<ReadResult> build_read_results(const map<string, Position>& truth,
         correct += r;
     }
     cerr << "Min tocni" << min_correct << endl;
+    cerr << "Pos " << pos_cnt << ";  cmpl " << cmpl_cnt << endl;
     cerr << "Max krivi" << max_wrong << endl;
     cerr << "Number of correct answers: " << correct << '/' << n << " = "
          << (double) correct / (double) n << endl;
