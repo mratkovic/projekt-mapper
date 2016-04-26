@@ -14,7 +14,7 @@ uint32_t pos_kmer_cnt = 0;
 uint32_t neg_tot_len = 0;
 uint32_t neg_kmer_cnt = 0;
 
-const bool LOAD = true;
+const bool LOAD = false;
 const bool SAVE = false;
 const int BREAK_CNT = INT32_MAX;
 
@@ -6383,20 +6383,18 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
 
             }
         }
-
-        auto p1 = truth.find(string(read->id()));
-        const Position& position1 = p1->second;
-        int32_t startR1 = position1.from;
-
-        auto p2 = truth.find(string(read2->id()));
-        const Position& position2 = p2->second;
-        int32_t startR2 = position2.from;
+//          REAL POSITIONS
+//        auto p1 = truth.find(string(read->id()));
+//        const Position& position1 = p1->second;
+//        int32_t startR1 = position1.from;
+//
+//        auto p2 = truth.find(string(read2->id()));
+//        const Position& position2 = p2->second;
+//        int32_t startR2 = position2.from;
 
         //cerr << "Szs " << p1s.size() << "  "  << p2s.size() << endl;
         //cerr << results.size() << endl;
         if(results.size() == 0 || *results.begin() > 2 * pairsDiff[mode]) {
-            // TODO
-
             fillPositions(read, seq, tmpOutput);
             if(read->positionsSize() == 0) {
                 scores.push_back(0);
@@ -6429,42 +6427,75 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
 
                 // tocni;
                 // cerr << ans.first->start() << "  "  << startR1 << endl;
-
-                if(ans.first->isComplement() && readStats.kmersCnt == 98 && readStats.revKmersCnt < 50
-                        && !ans.second->isComplement() &&  p1s.size() == 1
+                // mozda mogu fleksibilno ovo s 98 >
+                if(ans.first->isComplement() && readStats.kmersCnt > 90
+                        && readStats.revKmersCnt < 50
+                        && !ans.second->isComplement() && p1s.size() == 1
                         && p2s.size() == 1) {
 
-                    scores.push_back(150 * 1.8 * f);
-                    scores.push_back(150 * 1.8 * f);
+                    scores.push_back(sc * 1.8 * f);
+                    scores.push_back(sc * 1.8 * f);
 
-                    long myStartR1 = seq->positionInSeq(ans.first->start());
-                    long myStartR2 = seq->positionInSeq(ans.second->start());
+//                    long myStartR1 = seq->positionInSeq(ans.first->start());
+//                    long myStartR2 = seq->positionInSeq(ans.second->start());
+//
+//                    if(abs(myStartR1 - startR1) < 300
+//                            && abs(myStartR2 - startR2) < 300) {
+//                    } else {
+//                        cerr << p1s.size() << "  " << p2s.size() << endl;
+//                        cerr << "sc " << sc << "; off " << offset << endl;
+//                        cerr << abs(myStartR1 - startR1) << "  "
+//                             << abs(myStartR2 - startR2) << endl;
+//                        cerr << ans.first->isComplement() << "    "
+//                             << ans.second->isComplement() << endl;
+//
+//                        cerr << readStats.kmersCnt << ";   "
+//                             << readStats.kmersLen << "  |  ";
+//                        cerr << readStats.revKmersCnt << ";   "
+//                             << readStats.revKmersLen << endl;
+//                        cerr << readStats2.kmersCnt << ";   "
+//                             << readStats2.kmersLen << "  |  ";
+//                        cerr << readStats2.revKmersCnt << ";   "
+//                             << readStats2.revKmersLen << endl << endl;
+//                    }
 
-                    if(abs(myStartR1 - startR1) < 300
-                            && abs(myStartR2 - startR2) < 300) {
-                    } else {
-                        cerr << p1s.size() << "  " << p2s.size() << endl;
-                        cerr << "sc " << sc << "; off " << offset << endl;
-                        cerr << abs(myStartR1 - startR1) << "  "
-                             << abs(myStartR2 - startR2) << endl;
-                        cerr << ans.first->isComplement() << "    "
-                             << ans.second->isComplement() << endl;
+                } else if(!ans.first->isComplement()
+                        && readStats.revKmersCnt > 90 && readStats.kmersCnt < 50
+                        && ans.second->isComplement() && p1s.size() == 1
+                        && p2s.size() == 1) {
 
-                        cerr << readStats.kmersCnt << ";   "
-                             << readStats.kmersLen << "  |  ";
-                        cerr << readStats.revKmersCnt << ";   "
-                             << readStats.revKmersLen << endl;
-                        cerr << readStats2.kmersCnt << ";   "
-                             << readStats2.kmersLen << "  |  ";
-                        cerr << readStats2.revKmersCnt << ";   "
-                             << readStats2.revKmersLen << endl << endl;
-                    }
+                    scores.push_back(sc * 1.8 * f);
+                    scores.push_back(sc * 1.8 * f);
+
+//                    long myStartR1 = seq->positionInSeq(ans.first->start());
+//                    long myStartR2 = seq->positionInSeq(ans.second->start());
+//
+//                    if(abs(myStartR1 - startR1) < 300
+//                            && abs(myStartR2 - startR2) < 300) {
+//
+//                    } else {
+//                        cerr << p1s.size() << "  " << p2s.size() << endl;
+//                        cerr << "sc " << sc << "; off " << offset << endl;
+//                        cerr << abs(myStartR1 - startR1) << "  "
+//                             << abs(myStartR2 - startR2) << endl;
+//                        cerr << ans.first->isComplement() << "    "
+//                             << ans.second->isComplement() << endl;
+//
+//                        cerr << readStats.kmersCnt << ";   "
+//                             << readStats.kmersLen << "  |  ";
+//                        cerr << readStats.revKmersCnt << ";   "
+//                             << readStats.revKmersLen << endl;
+//                        cerr << readStats2.kmersCnt << ";   "
+//                             << readStats2.kmersLen << "  |  ";
+//                        cerr << readStats2.revKmersCnt << ";   "
+//                             << readStats2.revKmersLen << endl << endl;
+//                    }
 
                 } else if(offset < 350 && sc > 148 && p1s.size() == 1
                         && p2s.size() == 1) {
                     // 100 %
-                    scores.push_back(sc * 1.6 * f);
-                    scores.push_back(sc * 1.6 * f);
+                    scores.push_back(sc * 1.5 * f);
+                    scores.push_back(sc * 1.5 * f);
 
                 } else if(offset < 350) {
                     scores.push_back(sc * 1.1 * f / (p1s.size()));
@@ -6493,8 +6524,8 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 if(offset < 350 && sc > 148
                         && (p1s.size() == 1 || p2s.size() == 1)) {
                     // 100 %
-                    scores.push_back(sc * 0.0 * f);
-                    scores.push_back(sc * 0.0 * f);
+                    scores.push_back(sc * 1.0 * f);
+                    scores.push_back(sc * 1.0 * f);
                 } else {
                     scores.push_back(sc * 0. / (p1s.size() + p2s.size()));
                     scores.push_back(sc * 0. / (p1s.size() + p2s.size()));
