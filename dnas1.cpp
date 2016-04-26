@@ -5,21 +5,29 @@ using namespace std;
 #define LOCAL_ONLY
 
 namespace hawker {
+uint32_t tot_len = 0;
+uint32_t kmer_cnt = 0;
+
+uint32_t pos_tot_len = 0;
+uint32_t pos_kmer_cnt = 0;
+
+uint32_t neg_tot_len = 0;
+uint32_t neg_kmer_cnt = 0;
 
 const bool LOAD = true;
 const bool SAVE = false;
 const int BREAK_CNT = INT32_MAX;
 
-const int KMER = 55;
+const int KMER = 52;
 const int MAX_KMER = 144;
 const int LO_CNT = 1;
 const int HI_CNT = 1;
 const int THREADS = 1;
-const double KEEP_F = 2.8;
-const int KEEP_NUM = 12;
+const double KEEP_F = 1.8;
+const int KEEP_NUM = 8;
 const int MAX_EDIT = 35;
 
-const double TRESH = 0;
+const double TRESH = -1;
 
 const bool ALIGN = false;
 const bool FIND_STARTS = false;
@@ -1711,8 +1719,8 @@ class Read {
     float keepRatio_;
     uint32_t maxPositions_;
 
-    uint32_t kmerCnt[2] = {0, 0};
-    uint32_t kmerTotalLen[2] = {0, 0};
+    uint32_t kmerCnt[2] = { 0, 0 };
+    uint32_t kmerTotalLen[2] = { 0, 0 };
 
 };
 
@@ -5607,17 +5615,20 @@ void LCSkSolver::findReadPosition(Read* read) {
     }
     Read* reverse_complement = read->getReverseComplement();
     fillPositions(read);
+    pos_kmer_cnt = kmer_cnt;
+    pos_tot_len = tot_len;
 
     // add to keep best score and skip lcsk calculations
     // that will never give best score
     Position* p = read->bestPosition(0);
     if(p) {
         reverse_complement->addPosition(p->score(), p->start(), p->end(),
-                                        p->isComplement(), NULL, 0, p->secondaryScore());
+                                        p->isComplement(), NULL, 0,
+                                        p->secondaryScore());
     }
     fillPositions(reverse_complement);
-    read->kmerCnt[1] = reverse_complement->kmerCnt[0];
-    read->kmerTotalLen[1] = reverse_complement->kmerTotalLen[0];
+    neg_kmer_cnt = kmer_cnt;
+    neg_tot_len = tot_len;
 
     std::multiset<Position*, ptr_compare<Position> >::reverse_iterator it =
             reverse_complement->positions().rbegin();
@@ -5630,7 +5641,8 @@ void LCSkSolver::findReadPosition(Read* read) {
         }
 
         it->setComplement(true);
-        read->addPosition(it->score(), it->start(), it->end(), true, NULL, 0, it->secondaryScore());
+        read->addPosition(it->score(), it->start(), it->end(), true, NULL, 0,
+                          it->secondaryScore());
     }
 
     std::set<Position*, ptr_compare<Position> > tmp_set = read->positions();
@@ -5714,7 +5726,15 @@ void LCSkSolver::findReadPosition(Read* read, bool orientation) {
     if(seq_->basesInt()) {
         read->allBasesToSmallInt();
     }
-    if(orientation) fillPositions(read);
+    if(orientation) {
+        fillPositions(read);
+        pos_kmer_cnt = kmer_cnt;
+        pos_tot_len = tot_len;
+    } else {
+        pos_kmer_cnt = 0;
+        pos_tot_len = 0;
+
+    }
 
     Read* reverse_complement = NULL;
     if(!orientation) reverse_complement = read->getReverseComplement();
@@ -5724,12 +5744,13 @@ void LCSkSolver::findReadPosition(Read* read, bool orientation) {
     Position* p = read->bestPosition(0);
     if(p && !orientation) {
         reverse_complement->addPosition(p->score(), p->start(), p->end(),
-                                        p->isComplement(), NULL, 0, p->secondaryScore());
-
+                                        p->isComplement(), NULL, 0,
+                                        p->secondaryScore());
     }
     if(!orientation) {
         fillPositions(reverse_complement);
-
+        neg_kmer_cnt = kmer_cnt;
+        neg_tot_len = tot_len;
         std::multiset<Position*, ptr_compare<Position> >::reverse_iterator it =
                 reverse_complement->positions().rbegin();
 
@@ -5741,10 +5762,12 @@ void LCSkSolver::findReadPosition(Read* read, bool orientation) {
             }
 
             it->setComplement(true);
-            read->addPosition(it->score(), it->start(), it->end(), true, NULL, 0, it->secondaryScore());
+            read->addPosition(it->score(), it->start(), it->end(), true, NULL,
+                              0, it->secondaryScore());
         }
-        read->kmerCnt[1] = reverse_complement->kmerCnt[0];
-        read->kmerTotalLen[1] = reverse_complement->kmerTotalLen[0];
+    } else {
+        neg_kmer_cnt = 0;
+        neg_tot_len = 0;
     }
 
     std::set<Position*, ptr_compare<Position> > tmp_set = read->positions();
@@ -5804,7 +5827,8 @@ void LCSkSolver::findReadPosition(Read* read, bool orientation) {
         //            }
         //        }
         int newScore = read->dataLen() - myScore;
-        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0, (*it)->secondaryScore());
+        read->addPosition(newScore, start, end, (*it)->isComplement(), NULL, 0,
+                          (*it)->secondaryScore());
         //free(cigar);
         if(endLocations) {
             free(endLocations);
@@ -5852,8 +5876,8 @@ void IncrementalLCSkSolver::fillPositions(Read* read) {
     uint32_t prev_pos_cnt = 0;
     uint32_t len = kmerK_;
 
-    uint32_t tot_len = 0;
-    uint32_t kmer_cnt = 0;
+    tot_len = 0;
+    kmer_cnt = 0;
     for (uint32_t i = kmerK_; i < read->dataLen(); ++i) {
         len = getKmerPositions(read, pos, i - kmerK_, len);
         len = std::max<int>(kmerK_, len);
@@ -5867,7 +5891,6 @@ void IncrementalLCSkSolver::fillPositions(Read* read) {
             uint32_t new_len = getKmerPositions(read, pos, new_i - kmerK_,
                                                 kmerK_);
             new_len = std::max<int>(kmerK_, new_len);
-
 
             if(pos.size() >= prev_pos_cnt + minMatchNum_) {
                 tot_len += new_len;
@@ -5916,8 +5939,7 @@ void IncrementalLCSkSolver::fillPositions(Read* read) {
         }
 
     }
-    read->kmerCnt[0] = kmer_cnt;
-    read->kmerTotalLen[0] = tot_len;
+
 }
 
 void IncrementalLCSkSolver::runLCSkpp(int startIndex, int endIndex,
@@ -6068,6 +6090,28 @@ void Mapper::mapAllReads(char* readsInPath, char* solutionOutPath) {
 }
 
 }
+
+// oni data
+
+/**
+ * Position: describe the position of a read within the genome
+ */
+struct Position {
+    int rname;
+    int from;
+    int to;
+    char strand;
+};
+
+/**
+ * ReadResult: result of a read alignment
+ */
+struct ReadResult {
+    double confidence;
+    int r;
+};
+
+map<string, Position> truth;
 
 /*
  * DNASequencing.h
@@ -6229,9 +6273,27 @@ void fillPositions(hawker::Read* r, hawker::Sequence* s, vector<string>& ans) {
         ans.push_back(str);
     }
 }
+
+struct ReadStats {
+
+    uint32_t kmersLen;
+    uint32_t kmersCnt;
+
+    uint32_t revKmersLen;
+    uint32_t revKmersCnt;
+
+    ReadStats(uint32_t kLen, uint32_t kCnt, uint32_t rkLen, uint32_t rkCnt)
+            : kmersLen(kLen),
+              kmersCnt(kCnt),
+              revKmersLen(rkLen),
+              revKmersCnt(rkCnt) {
+    }
+};
+
 vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                                            const vector<string>& readName,
                                            const vector<string>& readSequence) {
+
     //FILE* out_file = fopen("./ans.minisam", "w");
     int notMapped = 0;
     solver->printInfo();
@@ -6252,6 +6314,8 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
         read->allBasesToSmallInt();
         solver->findReadPosition(read);
         auto p1s = read->positions();
+        ReadStats readStats(hawker::pos_tot_len, hawker::pos_kmer_cnt,
+                            hawker::neg_tot_len, hawker::neg_kmer_cnt);
 
         bool orientation = false;
         bool firstPass = true;
@@ -6286,6 +6350,8 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 solver->findReadPosition(read2, !orientation);
             }
         }
+        ReadStats readStats2(hawker::pos_tot_len, hawker::pos_kmer_cnt,
+                             hawker::neg_tot_len, hawker::neg_kmer_cnt);
         auto p2s = read2->positions();
         //assert(p2s.size() > 0);
 
@@ -6317,6 +6383,15 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
 
             }
         }
+
+        auto p1 = truth.find(string(read->id()));
+        const Position& position1 = p1->second;
+        int32_t startR1 = position1.from;
+
+        auto p2 = truth.find(string(read2->id()));
+        const Position& position2 = p2->second;
+        int32_t startR2 = position2.from;
+
         //cerr << "Szs " << p1s.size() << "  "  << p2s.size() << endl;
         //cerr << results.size() << endl;
         if(results.size() == 0 || *results.begin() > 2 * pairsDiff[mode]) {
@@ -6351,39 +6426,52 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 int offset = *results.begin();
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
                 double f = 1.;
-                if(offset < 150 && sc > 149 && p1s.size() == 1
+
+                // tocni;
+                // cerr << ans.first->start() << "  "  << startR1 << endl;
+
+                if(ans.first->isComplement() && readStats.kmersCnt == 98 && readStats.revKmersCnt < 50
+                        && !ans.second->isComplement() &&  p1s.size() == 1
                         && p2s.size() == 1) {
-                    // 100 %
-//                    cerr << read->kmerCnt[0] << "; "  <<  read->kmerTotalLen[0]<< endl;
-//                    cerr << read->kmerCnt[1] << "; "  <<  read->kmerTotalLen[1]<< endl;
-//
-//                    cerr << read2->kmerCnt[0] << "; "  <<  read2->kmerTotalLen[0]<< endl;
-//                    cerr << read2->kmerCnt[1] << "; "  <<  read2->kmerTotalLen[1]<< endl;
-//
-//                    cerr << ans.first ->isComplement() << "; "  << ans.second->isComplement() << endl << endl;;
-                    scores.push_back(150 * 1.6* f);
-                    scores.push_back(150 * 1.6* f);
+
+                    scores.push_back(150 * 1.8 * f);
+                    scores.push_back(150 * 1.8 * f);
+
+                    long myStartR1 = seq->positionInSeq(ans.first->start());
+                    long myStartR2 = seq->positionInSeq(ans.second->start());
+
+                    if(abs(myStartR1 - startR1) < 300
+                            && abs(myStartR2 - startR2) < 300) {
+                    } else {
+                        cerr << p1s.size() << "  " << p2s.size() << endl;
+                        cerr << "sc " << sc << "; off " << offset << endl;
+                        cerr << abs(myStartR1 - startR1) << "  "
+                             << abs(myStartR2 - startR2) << endl;
+                        cerr << ans.first->isComplement() << "    "
+                             << ans.second->isComplement() << endl;
+
+                        cerr << readStats.kmersCnt << ";   "
+                             << readStats.kmersLen << "  |  ";
+                        cerr << readStats.revKmersCnt << ";   "
+                             << readStats.revKmersLen << endl;
+                        cerr << readStats2.kmersCnt << ";   "
+                             << readStats2.kmersLen << "  |  ";
+                        cerr << readStats2.revKmersCnt << ";   "
+                             << readStats2.revKmersLen << endl << endl;
+                    }
 
                 } else if(offset < 350 && sc > 148 && p1s.size() == 1
                         && p2s.size() == 1) {
                     // 100 %
-                    scores.push_back(150 * 1.2* f);
-                    scores.push_back(150 * 1.2* f);
-                }else if(offset < 350 && sc > 146 && p1s.size() == 1
-                        && p2s.size() == 1) {
-                    // 100 %
-                    scores.push_back(sc * 0* f);
-                    scores.push_back(sc * 0* f);
-                }  else if(offset < 450) {
-                    scores.push_back(
-                            sc  * 0.* f / (p1s.size() ));
-                    scores.push_back(
-                            sc * 0.* f / ( p2s.size()));
+                    scores.push_back(sc * 1.6 * f);
+                    scores.push_back(sc * 1.6 * f);
+
+                } else if(offset < 350) {
+                    scores.push_back(sc * 1.1 * f / (p1s.size()));
+                    scores.push_back(sc * 1.1 * f / (p2s.size()));
                 } else {
-                    scores.push_back(
-                            sc * 0.0 / (p1s.size() + p2s.size()));
-                    scores.push_back(
-                            sc * 0.0 / (p1s.size() + p2s.size()));
+                    scores.push_back(sc * 0.0 / (p1s.size() + p2s.size()));
+                    scores.push_back(sc * 0.0 / (p1s.size() + p2s.size()));
                 }
             }
 
@@ -6402,27 +6490,18 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                 double f = 1.;
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
 
-                if(offset < 150 && sc > 148
+                if(offset < 350 && sc > 148
                         && (p1s.size() == 1 || p2s.size() == 1)) {
                     // 100 %
-                    scores.push_back(sc * 0.0 * f );
                     scores.push_back(sc * 0.0 * f);
-                } else if(offset < 350 && sc > 148
-                        && (p1s.size() == 1 || p2s.size() == 1)) {
-                    // 100 %
-                    scores.push_back(sc * 0.0 * f );
                     scores.push_back(sc * 0.0 * f);
-                } else{
-                    scores.push_back(
-                            sc  * 0. / (p1s.size() + p2s.size()));
-                    scores.push_back(
-                            sc * 0. / (p1s.size() + p2s.size()));
+                } else {
+                    scores.push_back(sc * 0. / (p1s.size() + p2s.size()));
+                    scores.push_back(sc * 0. / (p1s.size() + p2s.size()));
                 }
                 //scores.push_back(ans.first->score() * 0 / (1.0 * normals));
                 //scores.push_back(ans.second->score() * 0 / (1.0 * normals));
-
             }
-
         }
 //tmpOutput[0].push_back(read->getReadMiniSAM(seq));
         delete read;
@@ -6467,24 +6546,6 @@ const double NORM_A_SMALL = -3.392;
 const double NORM_A_MEDIUM = -3.962;
 const double NORM_A_LARGE = -2.710;
 const double MAX_AUC = 0.999999;
-
-/**
- * Position: describe the position of a read within the genome
- */
-struct Position {
-    int rname;
-    int from;
-    int to;
-    char strand;
-};
-
-/**
- * ReadResult: result of a read alignment
- */
-struct ReadResult {
-    double confidence;
-    int r;
-};
 
 /**
  * Split a comma-separated string into a vector of string
@@ -6721,11 +6782,13 @@ int test(const int testDifficulty) {
         minisam_path = PATH + "/data/large" + TEST_NUM + ".minisam";
         norm_a = NORM_A_LARGE;
     }
+    // load truth
+    truth = parse_truth(minisam_path);
+
     // perform test
     vector<string> results = perform_test(testDifficulty, norm_a);
     cout << "Broj rezultata:" << results.size() << endl;
-    // load truth
-    map<string, Position> truth = parse_truth(minisam_path);
+
     vector<ReadResult> read_results = build_read_results(truth, results);
     // scoring
     double accuracy = compute_accuracy(read_results, norm_a);
