@@ -6827,7 +6827,7 @@ int test(const int testDifficulty) {
     return 0;
 }
 
-int mainAJMOOOOOOO(int argc, char** argv) {
+int main(int argc, char** argv) {
     int mode = 0;
     if(argc > 1) {
         mode = atoi(argv[1]);
