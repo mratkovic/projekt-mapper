@@ -4,6 +4,8 @@ using namespace std;
 // If you submit, comment the following line
 #define LOCAL_ONLY
 
+//#define ASSEMBLY
+
 namespace hawker {
 uint32_t tot_len = 0;
 uint32_t kmer_cnt = 0;
@@ -14,7 +16,7 @@ uint32_t pos_kmer_cnt = 0;
 uint32_t neg_tot_len = 0;
 uint32_t neg_kmer_cnt = 0;
 
-const bool LOAD = false;
+const bool LOAD = true;
 const bool SAVE = false;
 const int BREAK_CNT = INT32_MAX;
 
@@ -27,7 +29,7 @@ const double KEEP_F = 1.8;
 const int KEEP_NUM = 8;
 const int MAX_EDIT = 35;
 
-const double TRESH = -1;
+const double TRESH = 0;
 
 const bool ALIGN = false;
 const bool FIND_STARTS = false;
@@ -3700,6 +3702,7 @@ static const saint_t sqq_table[256] = { 0, 16, 22, 27, 32, 35, 39, 42, 45, 48,
         255 };
 
 static inline saidx_t ss_isqrt(saidx_t x) {
+
     saidx_t y, e;
 
     if(x >= (SS_BLOCKSIZE * SS_BLOCKSIZE)) {
@@ -6199,11 +6202,11 @@ int DNASequencing::preProcessing() {
     seq->basesAsInt_ = false;
 
     uint32_t prev = 0;
-    for (auto ends : this->chLens) {
+    for (auto& ends : this->chLens) {
         prev += ends;
         seq->seqEndIndex_.push_back(prev);
     }
-    for (auto id : this->chIds) {
+    for (auto& id : this->chIds) {
         seq->info_.push_back(id);
     }
 
@@ -6269,7 +6272,7 @@ int DNASequencing::passReferenceGenome(
 
 void fillPositions(hawker::Read* r, hawker::Sequence* s, vector<string>& ans) {
     auto mappings = r->getReadMiniSAMs(s);
-    for (auto str : mappings) {
+    for (auto& str : mappings) {
         ans.push_back(str);
     }
 }
@@ -6290,6 +6293,22 @@ struct ReadStats {
     }
 };
 
+struct BucketData {
+    uint32_t id;
+    double score;
+
+    BucketData(uint32_t id_, double score_)
+            : id(id_),
+              score(score_) {
+
+    }
+
+    // desc
+    bool operator <(const BucketData& b) const {
+        return score > b.score;
+    }
+};
+
 vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
                                            const vector<string>& readName,
                                            const vector<string>& readSequence) {
@@ -6298,15 +6317,27 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
     int notMapped = 0;
     solver->printInfo();
     vector<string> tmpOutput;
-    vector<double> scores;
-    double miniSc = 2000;
-    double maxiSc = 0;
+
+    // ideja sa bucketima
+    // INIT
+    const int N_BUCKETS = 10;
+    const int LAST_BUCKET = 9;
+    vector<BucketData> vdb;
+    vector<vector<BucketData>> buckets(N_BUCKETS, vdb);
+
+    auto addScore = [&buckets](uint32_t i, double sc, uint32_t ID) {
+        if(sc == 0) {
+            BucketData bd(i, sc);
+            buckets.back().push_back(bd);
+        } else {
+            BucketData bd(i, sc);
+            buckets[ID].push_back(bd);
+        }
+    };
 
     for (int i = 0; i < N; i += 2) {
-        //if(i < 898000) continue;
         if(i > hawker::BREAK_CNT) break;
         if(i % 5000 == 0) cerr << i << endl;
-        // create task for  solving single read
 
         // r1
         hawker::Read* read = new hawker::Read(hawker::KEEP_F, hawker::KEEP_NUM);
@@ -6334,7 +6365,6 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
         }
 
         // r2
-
         hawker::Read* read2 = new hawker::Read(hawker::KEEP_F,
                                                hawker::KEEP_NUM);
         read2->setData(readSequence[i + 1], readName[i + 1]);
@@ -6342,7 +6372,6 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
 
         if(notSame) {
             solver->findReadPosition(read2);
-
         } else {
             solver->findReadPosition(read2, orientation);
             auto posss = read2->positions();
@@ -6359,8 +6388,8 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
         long bestDist = INT32_MAX;
         set<long> results;
 
-        for (auto p1 : p1s) {
-            for (auto p2 : p2s) {
+        for (auto& p1 : p1s) {
+            for (auto& p2 : p2s) {
                 if(p1->isComplement() == p2->isComplement()) continue;
                 long start1 = p1->start();
                 long start2 = p2->start();
@@ -6384,189 +6413,498 @@ vector<string> DNASequencing::getAlignment(int N, double normA, double normS,
             }
         }
 //          REAL POSITIONS
-//        auto p1 = truth.find(string(read->id()));
-//        const Position& position1 = p1->second;
-//        int32_t startR1 = position1.from;
-//
-//        auto p2 = truth.find(string(read2->id()));
-//        const Position& position2 = p2->second;
-//        int32_t startR2 = position2.from;
+        auto p1 = truth.find(string(read->id()));
+        const Position& position1 = p1->second;
+        int32_t startR1 = position1.from;
 
-        //cerr << "Szs " << p1s.size() << "  "  << p2s.size() << endl;
-        //cerr << results.size() << endl;
+        auto p2 = truth.find(string(read2->id()));
+        const Position& position2 = p2->second;
+        int32_t startR2 = position2.from;
+
+        // tocni;
+        // cerr << ans.first->start() << "  "  << startR1 << endl;
+//                                    long myStartR1 = seq->positionInSeq(ans.first->start());
+//                                    long myStartR2 = seq->positionInSeq(ans.second->start());
+//
+//                                    if(abs(myStartR1 - startR1) < 300
+//                                            && abs(myStartR2 - startR2) < 300) {
+//                                    } else {
+//                                        cerr << p1s.size() << "  " << p2s.size() << endl;
+//                                        cerr << "sc " << sc << "; off " << offset << endl;
+//                                        cerr << (myStartR1 - startR1) << "  "
+//                                             << (myStartR2 - startR2) << endl;
+//                                        cerr << ans.first->isComplement() << "    "
+//                                             << ans.second->isComplement() << endl;
+//
+//                                        cerr << readStats.kmersCnt << ";   "
+//                                             << readStats.kmersLen << "  |  ";
+//                                        cerr << readStats.revKmersCnt << ";   "
+//                                             << readStats.revKmersLen << endl;
+//                                        cerr << readStats2.kmersCnt << ";   "
+//                                             << readStats2.kmersLen << "  |  ";
+//                                        cerr << readStats2.revKmersCnt << ";   "
+//                                             << readStats2.revKmersLen << endl << endl;
+//                                     }
+
+        // Determine scores
         if(results.size() == 0 || *results.begin() > 2 * pairsDiff[mode]) {
+            // Worst scores, ambiguous
             fillPositions(read, seq, tmpOutput);
             if(read->positionsSize() == 0) {
-                scores.push_back(0);
+                addScore(i, 0, LAST_BUCKET);
                 notMapped++;
-                // cerr << "Not mapped [" << i << "]" << endl;
             } else {
-                double sc = read->bestPosition(0)->score() / 150.0 * 0.000;
-                scores.push_back(sc);
+                double sc = read->bestPosition(0)->score() * 1.000;
+                addScore(i, 0, LAST_BUCKET);
             }
 
             fillPositions(read2, seq, tmpOutput);
             if(read2->positionsSize() == 0) {
-                scores.push_back(0);
-                //cerr << "Not mapped [" << i << "]" << endl;
+                addScore(i + 1, 0, LAST_BUCKET);
                 notMapped++;
             } else {
-                double sc = read2->bestPosition(0)->score() / 150.0 * 0.000;
-                scores.push_back(sc);
+                double sc = read2->bestPosition(0)->score() * 1.000;
+                addScore(i + 1, 0, LAST_BUCKET);
             }
 
         } else {
             if(results.size() == 1) {
-                tmpOutput.push_back(
-                        read->generateMiniSAM(ans.first, 0.99, seq));
-                tmpOutput.push_back(
-                        read2->generateMiniSAM(ans.second, 0.99, seq));
+                tmpOutput.push_back(read->generateMiniSAM(ans.first, 0, seq));
+                tmpOutput.push_back(read2->generateMiniSAM(ans.second, 0, seq));
+
                 int offset = *results.begin();
                 double sc = (ans.first->score() + ans.second->score()) / 2.0;
-                double f = 1.;
 
-                // tocni;
-                // cerr << ans.first->start() << "  "  << startR1 << endl;
-                // mozda mogu fleksibilno ovo s 98 >
-                if(ans.first->isComplement() && readStats.kmersCnt > 90
-                        && readStats.revKmersCnt < 50
-                        && !ans.second->isComplement() && p1s.size() == 1
-                        && p2s.size() == 1) {
-
-                    scores.push_back(sc * 1.8 * f);
-                    scores.push_back(sc * 1.8 * f);
-
-//                    long myStartR1 = seq->positionInSeq(ans.first->start());
-//                    long myStartR2 = seq->positionInSeq(ans.second->start());
-//
-//                    if(abs(myStartR1 - startR1) < 300
-//                            && abs(myStartR2 - startR2) < 300) {
-//                    } else {
-//                        cerr << p1s.size() << "  " << p2s.size() << endl;
-//                        cerr << "sc " << sc << "; off " << offset << endl;
-//                        cerr << abs(myStartR1 - startR1) << "  "
-//                             << abs(myStartR2 - startR2) << endl;
-//                        cerr << ans.first->isComplement() << "    "
-//                             << ans.second->isComplement() << endl;
-//
-//                        cerr << readStats.kmersCnt << ";   "
-//                             << readStats.kmersLen << "  |  ";
-//                        cerr << readStats.revKmersCnt << ";   "
-//                             << readStats.revKmersLen << endl;
-//                        cerr << readStats2.kmersCnt << ";   "
-//                             << readStats2.kmersLen << "  |  ";
-//                        cerr << readStats2.revKmersCnt << ";   "
-//                             << readStats2.revKmersLen << endl << endl;
-//                    }
-
-                } else if(!ans.first->isComplement()
-                        && readStats.revKmersCnt > 90 && readStats.kmersCnt < 50
-                        && ans.second->isComplement() && p1s.size() == 1
-                        && p2s.size() == 1) {
-
-                    scores.push_back(sc * 1.8 * f);
-                    scores.push_back(sc * 1.8 * f);
-
-//                    long myStartR1 = seq->positionInSeq(ans.first->start());
-//                    long myStartR2 = seq->positionInSeq(ans.second->start());
-//
-//                    if(abs(myStartR1 - startR1) < 300
-//                            && abs(myStartR2 - startR2) < 300) {
-//
-//                    } else {
-//                        cerr << p1s.size() << "  " << p2s.size() << endl;
-//                        cerr << "sc " << sc << "; off " << offset << endl;
-//                        cerr << abs(myStartR1 - startR1) << "  "
-//                             << abs(myStartR2 - startR2) << endl;
-//                        cerr << ans.first->isComplement() << "    "
-//                             << ans.second->isComplement() << endl;
-//
-//                        cerr << readStats.kmersCnt << ";   "
-//                             << readStats.kmersLen << "  |  ";
-//                        cerr << readStats.revKmersCnt << ";   "
-//                             << readStats.revKmersLen << endl;
-//                        cerr << readStats2.kmersCnt << ";   "
-//                             << readStats2.kmersLen << "  |  ";
-//                        cerr << readStats2.revKmersCnt << ";   "
-//                             << readStats2.revKmersLen << endl << endl;
-//                    }
-
-                } else if(offset < 350 && sc > 148 && p1s.size() == 1
-                        && p2s.size() == 1) {
-                    // 100 %
-                    scores.push_back(sc * 1.5 * f);
-                    scores.push_back(sc * 1.5 * f);
-
-                } else if(offset < 350) {
-                    scores.push_back(sc * 1.1 * f / (p1s.size()));
-                    scores.push_back(sc * 1.1 * f / (p2s.size()));
+                double cntFactor;
+                if(p1s.size() + p2s.size() == 2) {
+                    cntFactor = 1.0;
                 } else {
-                    scores.push_back(sc * 0.0 / (p1s.size() + p2s.size()));
-                    scores.push_back(sc * 0.0 / (p1s.size() + p2s.size()));
+                    cntFactor = 1 - (p1s.size() + p2s.size()) / 50.0;  // smanji za par posto
+                }
+
+                // 100% dobri, skoro unique, rev minimalno mapiran
+                // jedine pozicije
+                if(ans.first->isComplement() && readStats.kmersCnt > 88
+                        && readStats.revKmersCnt < 12
+                        && readStats2.kmersCnt < 12
+                        && !ans.second->isComplement()
+                        && (p1s.size() == 1 && p2s.size() == 1)) {
+
+                    addScore(i, sc * cntFactor, 0);
+                    addScore(i + 1, sc * cntFactor, 0);
+
+
+                    long myStartR1 = seq->positionInSeq(ans.first->start());
+                    long myStartR2 = seq->positionInSeq(ans.second->start());
+
+                    if(abs(myStartR1 - startR1) < 300
+                            && abs(myStartR2 - startR2) < 300) {
+                    } else {
+                        cerr << ">1" << endl;
+                        cerr << p1s.size() << "  " << p2s.size() << endl;
+                        cerr << "sc " << sc << "; off " << offset << endl;
+                        cerr << (myStartR1 - startR1) << "  "
+                             << (myStartR2 - startR2) << endl;
+                        cerr << ans.first->isComplement() << "    "
+                             << ans.second->isComplement() << endl;
+
+                        cerr << readStats.kmersCnt << ";   "
+                             << readStats.kmersLen << "  |  ";
+                        cerr << readStats.revKmersCnt << ";   "
+                             << readStats.revKmersLen << endl;
+                        cerr << readStats2.kmersCnt << ";   "
+                             << readStats2.kmersLen << "  |  ";
+                        cerr << readStats2.revKmersCnt << ";   "
+                             << readStats2.revKmersLen << endl << endl;
+                     }
+                } else if(!ans.first->isComplement()
+                        && readStats.revKmersCnt > 88 && readStats.kmersCnt < 12
+                        && readStats2.revKmersCnt < 12
+                        && ans.second->isComplement()
+                        && (p1s.size() == 1 && p2s.size() == 1)) {
+
+                    addScore(i, sc * cntFactor, 0);
+                    addScore(i + 1, sc * cntFactor, 0);
+
+                    long myStartR1 = seq->positionInSeq(ans.first->start());
+                    long myStartR2 = seq->positionInSeq(ans.second->start());
+
+                    if(abs(myStartR1 - startR1) < 300
+                            && abs(myStartR2 - startR2) < 300) {
+                    } else {
+                        cerr << ">1" << endl;
+                        cerr << p1s.size() << "  " << p2s.size() << endl;
+                        cerr << "sc " << sc << "; off " << offset << endl;
+                        cerr << (myStartR1 - startR1) << "  "
+                             << (myStartR2 - startR2) << endl;
+                        cerr << ans.first->isComplement() << "    "
+                             << ans.second->isComplement() << endl;
+
+                        cerr << readStats.kmersCnt << ";   "
+                             << readStats.kmersLen << "  |  ";
+                        cerr << readStats.revKmersCnt << ";   "
+                             << readStats.revKmersLen << endl;
+                        cerr << readStats2.kmersCnt << ";   "
+                             << readStats2.kmersLen << "  |  ";
+                        cerr << readStats2.revKmersCnt << ";   "
+                             << readStats2.revKmersLen << endl << endl;
+                     }
+
+                    // but relaxed
+                } else if(ans.first->isComplement() && readStats.kmersCnt > 88
+                        && readStats.revKmersCnt < 47
+                        && readStats2.kmersCnt < 50
+                        && !ans.second->isComplement()
+                        && (p1s.size() == 1 || p2s.size() == 1)) {
+
+                    addScore(i, sc * cntFactor * 1.6, 1);
+                    addScore(i + 1, sc * cntFactor * 1.6, 1);
+
+
+                    long myStartR1 = seq->positionInSeq(ans.first->start());
+                    long myStartR2 = seq->positionInSeq(ans.second->start());
+
+                    if(abs(myStartR1 - startR1) < 300
+                            && abs(myStartR2 - startR2) < 300) {
+                    } else {
+                        cerr << ">2" << endl;
+                        cerr << p1s.size() << "  " << p2s.size() << endl;
+                        cerr << "sc " << sc << "; off " << offset << endl;
+                        cerr << (myStartR1 - startR1) << "  "
+                             << (myStartR2 - startR2) << endl;
+                        cerr << ans.first->isComplement() << "    "
+                             << ans.second->isComplement() << endl;
+
+                        cerr << readStats.kmersCnt << ";   "
+                             << readStats.kmersLen << "  |  ";
+                        cerr << readStats.revKmersCnt << ";   "
+                             << readStats.revKmersLen << endl;
+                        cerr << readStats2.kmersCnt << ";   "
+                             << readStats2.kmersLen << "  |  ";
+                        cerr << readStats2.revKmersCnt << ";   "
+                             << readStats2.revKmersLen << endl << endl;
+                     }
+                } else if(!ans.first->isComplement()
+                        && readStats.revKmersCnt > 88 && readStats.kmersCnt < 47
+                        && readStats2.revKmersCnt < 50
+                        && ans.second->isComplement()
+                        && (p1s.size() == 1 || p2s.size() == 1)) {
+
+                    addScore(i, sc * cntFactor * 1.6, 1);
+                    addScore(i + 1, sc * cntFactor * 1.6, 1);
+
+                    long myStartR1 = seq->positionInSeq(ans.first->start());
+                    long myStartR2 = seq->positionInSeq(ans.second->start());
+
+                    if(abs(myStartR1 - startR1) < 300
+                            && abs(myStartR2 - startR2) < 300) {
+                    } else {
+                        cerr << ">2" << endl;
+                        cerr << p1s.size() << "  " << p2s.size() << endl;
+                        cerr << "sc " << sc << "; off " << offset << endl;
+                        cerr << (myStartR1 - startR1) << "  "
+                             << (myStartR2 - startR2) << endl;
+                        cerr << ans.first->isComplement() << "    "
+                             << ans.second->isComplement() << endl;
+
+                        cerr << readStats.kmersCnt << ";   "
+                             << readStats.kmersLen << "  |  ";
+                        cerr << readStats.revKmersCnt << ";   "
+                             << readStats.revKmersLen << endl;
+                        cerr << readStats2.kmersCnt << ";   "
+                             << readStats2.kmersLen << "  |  ";
+                        cerr << readStats2.revKmersCnt << ";   "
+                             << readStats2.revKmersLen << endl << endl;
+                     }
+
+                    // same but reverse
+                } else if(ans.first->isComplement()
+                        && readStats.revKmersCnt < 50
+                        && readStats2.kmersCnt < 47
+                        && readStats2.revKmersCnt > 88
+                        && !ans.second->isComplement()
+                        && (p1s.size() == 1 || p2s.size() == 1)) {
+
+                    addScore(i, sc * cntFactor * 1.6, 1);
+                    addScore(i + 1, sc * cntFactor * 1.6, 1);
+
+                    long myStartR1 = seq->positionInSeq(ans.first->start());
+                    long myStartR2 = seq->positionInSeq(ans.second->start());
+
+                    if(abs(myStartR1 - startR1) < 300
+                            && abs(myStartR2 - startR2) < 300) {
+                    } else {
+                        cerr << ">2" << endl;
+                        cerr << p1s.size() << "  " << p2s.size() << endl;
+                        cerr << "sc " << sc << "; off " << offset << endl;
+                        cerr << (myStartR1 - startR1) << "  "
+                             << (myStartR2 - startR2) << endl;
+                        cerr << ans.first->isComplement() << "    "
+                             << ans.second->isComplement() << endl;
+
+                        cerr << readStats.kmersCnt << ";   "
+                             << readStats.kmersLen << "  |  ";
+                        cerr << readStats.revKmersCnt << ";   "
+                             << readStats.revKmersLen << endl;
+                        cerr << readStats2.kmersCnt << ";   "
+                             << readStats2.kmersLen << "  |  ";
+                        cerr << readStats2.revKmersCnt << ";   "
+                             << readStats2.revKmersLen << endl << endl;
+                     }
+
+                } else if(!ans.first->isComplement() && readStats.kmersCnt < 50
+                        && readStats2.revKmersCnt < 47
+                        && readStats2.kmersCnt > 88
+                        && ans.second->isComplement()
+                        && (p1s.size() == 1 || p2s.size() == 1)) {
+
+                    addScore(i, sc * cntFactor * 1.6, 1);
+                    addScore(i + 1, sc * cntFactor * 1.6, 1);
+
+                    long myStartR1 = seq->positionInSeq(ans.first->start());
+                    long myStartR2 = seq->positionInSeq(ans.second->start());
+
+                    if(abs(myStartR1 - startR1) < 300
+                            && abs(myStartR2 - startR2) < 300) {
+                    } else {
+                        cerr << ">2" << endl;
+                        cerr << p1s.size() << "  " << p2s.size() << endl;
+                        cerr << "sc " << sc << "; off " << offset << endl;
+                        cerr << (myStartR1 - startR1) << "  "
+                             << (myStartR2 - startR2) << endl;
+                        cerr << ans.first->isComplement() << "    "
+                             << ans.second->isComplement() << endl;
+
+                        cerr << readStats.kmersCnt << ";   "
+                             << readStats.kmersLen << "  |  ";
+                        cerr << readStats.revKmersCnt << ";   "
+                             << readStats.revKmersLen << endl;
+                        cerr << readStats2.kmersCnt << ";   "
+                             << readStats2.kmersLen << "  |  ";
+                        cerr << readStats2.revKmersCnt << ";   "
+                             << readStats2.revKmersLen << endl << endl;
+                     }
+//                    // oba sparse
+//                } else if(ans.first->isComplement()
+//                        && !ans.second->isComplement()
+//                        && readStats.revKmersCnt < 12
+//                        && readStats2.kmersCnt < 12
+//                        && (p1s.size() == 1 || p2s.size() == 1)) {
+//
+//                    addScore(i, sc * cntFactor, 3);
+//                    addScore(i + 1, sc * cntFactor, 3);
+//
+//                } else if(!ans.first->isComplement()
+//                        && ans.second->isComplement() && readStats.kmersCnt < 12
+//                        && readStats2.revKmersCnt < 12
+//                        && (p1s.size() == 1 || p2s.size() == 1)) {
+//                    addScore(i, sc * cntFactor, 3);
+//                    addScore(i + 1, sc * cntFactor, 3);
+
+                } else if(ans.first->isComplement()
+                        && !ans.second->isComplement()
+                        && readStats.kmersCnt > 90 && readStats2.kmersCnt < 10
+                        && (p1s.size() == 1 || p2s.size() == 1)) {
+
+                    addScore(i, sc * cntFactor * 1.2, 1);
+                    addScore(i + 1, sc * cntFactor * 1.2, 1);
+                    long myStartR1 = seq->positionInSeq(ans.first->start());
+                    long myStartR2 = seq->positionInSeq(ans.second->start());
+
+                    if(abs(myStartR1 - startR1) < 300
+                            && abs(myStartR2 - startR2) < 300) {
+                    } else {
+                        cerr << ">3" << endl;
+                        cerr << p1s.size() << "  " << p2s.size() << endl;
+                        cerr << "sc " << sc << "; off " << offset << endl;
+                        cerr << (myStartR1 - startR1) << "  "
+                             << (myStartR2 - startR2) << endl;
+                        cerr << ans.first->isComplement() << "    "
+                             << ans.second->isComplement() << endl;
+
+                        cerr << readStats.kmersCnt << ";   "
+                             << readStats.kmersLen << "  |  ";
+                        cerr << readStats.revKmersCnt << ";   "
+                             << readStats.revKmersLen << endl;
+                        cerr << readStats2.kmersCnt << ";   "
+                             << readStats2.kmersLen << "  |  ";
+                        cerr << readStats2.revKmersCnt << ";   "
+                             << readStats2.revKmersLen << endl << endl;
+                     }
+                }
+
+                else if(!ans.first->isComplement() && ans.second->isComplement()
+                        && readStats.revKmersCnt > 90
+                        && readStats2.revKmersCnt < 10
+                        && (p1s.size() == 1 || p2s.size() == 1)) {
+
+                    addScore(i, sc * cntFactor * 1.2, 1);
+                    addScore(i + 1, sc * cntFactor * 1.2, 1);
+                    long myStartR1 = seq->positionInSeq(ans.first->start());
+                    long myStartR2 = seq->positionInSeq(ans.second->start());
+
+                    if(abs(myStartR1 - startR1) < 300
+                            && abs(myStartR2 - startR2) < 300) {
+                    } else {
+                        cerr << ">3" << endl;
+                        cerr << p1s.size() << "  " << p2s.size() << endl;
+                        cerr << "sc " << sc << "; off " << offset << endl;
+                        cerr << (myStartR1 - startR1) << "  "
+                             << (myStartR2 - startR2) << endl;
+                        cerr << ans.first->isComplement() << "    "
+                             << ans.second->isComplement() << endl;
+
+                        cerr << readStats.kmersCnt << ";   "
+                             << readStats.kmersLen << "  |  ";
+                        cerr << readStats.revKmersCnt << ";   "
+                             << readStats.revKmersLen << endl;
+                        cerr << readStats2.kmersCnt << ";   "
+                             << readStats2.kmersLen << "  |  ";
+                        cerr << readStats2.revKmersCnt << ";   "
+                             << readStats2.revKmersLen << endl << endl;
+                     }
+
+                } else {
+
+                    if(offset < 350 && sc > 148 && p1s.size() == 1
+
+                    && p2s.size() == 1) {
+
+                        double reduceF = 1;
+                        double denum = 90;
+                        if(denum != 0) {
+                            reduceF = abs(
+                                    (long) readStats.kmersCnt
+                                            - readStats.revKmersCnt) / denum;
+                        } else {
+                            reduceF = 0;
+                        }
+                        if(reduceF < 0.4) reduceF = 0;
+                        addScore(i, sc * reduceF * 0.85, 1);
+                        addScore(i + 1, sc * reduceF * 0.85, 1);
+
+                        long myStartR1 = seq->positionInSeq(ans.first->start());
+                        long myStartR2 = seq->positionInSeq(ans.second->start());
+
+                        if(abs(myStartR1 - startR1) < 300
+                                && abs(myStartR2 - startR2) < 300) {
+                        } else {
+                            cerr << ">4" << endl;
+                            cerr << p1s.size() << "  " << p2s.size() << endl;
+                            cerr << "sc " << sc << "; off " << offset << endl;
+                            cerr << (myStartR1 - startR1) << "  "
+                                 << (myStartR2 - startR2) << endl;
+                            cerr << ans.first->isComplement() << "    "
+                                 << ans.second->isComplement() << endl;
+
+                            cerr << readStats.kmersCnt << ";   "
+                                 << readStats.kmersLen << "  |  ";
+                            cerr << readStats.revKmersCnt << ";   "
+                                 << readStats.revKmersLen << endl;
+                            cerr << readStats2.kmersCnt << ";   "
+                                 << readStats2.kmersLen << "  |  ";
+                            cerr << readStats2.revKmersCnt << ";   "
+                                 << readStats2.revKmersLen << endl << endl;
+                         }
+
+                    } else if(offset < 350) {
+                        addScore(i, sc * 0 / p1s.size(), 1);
+                        addScore(i + 1, sc * 0 / p1s.size(), 1);
+                    } else {
+                        addScore(i, sc * 0.0 / (p1s.size() + p2s.size()), 1);
+                        addScore(i + 1, sc * 0.0 / (p1s.size() + p2s.size()),
+                                 0);
+
+                    }
                 }
             }
 
             else {
+
                 int normals = 0;
-                for (auto sc : results) {
+                for (auto& sc : results) {
                     if(sc > pairsDiff[mode]) break;
                     ++normals;
                 }
-                tmpOutput.push_back(
-                        read->generateMiniSAM(ans.first, 0.99 / normals, seq));
-                tmpOutput.push_back(
-                        read2->generateMiniSAM(ans.second, 0.99 / normals,
-                                               seq));
-                int offset = *results.begin();
-                double f = 1.;
-                double sc = (ans.first->score() + ans.second->score()) / 2.0;
+                tmpOutput.push_back(read->generateMiniSAM(ans.first, 0, seq));
+                tmpOutput.push_back(read2->generateMiniSAM(ans.second, 0, seq));
 
+                int offset = *results.begin();
+                double sc = (ans.first->score() + ans.second->score()) / 2.0;
                 if(offset < 350 && sc > 148
                         && (p1s.size() == 1 || p2s.size() == 1)) {
-                    // 100 %
-                    scores.push_back(sc * 1.0 * f);
-                    scores.push_back(sc * 1.0 * f);
+                    addScore(i, sc * 0, 1);
+                    addScore(i + 1, sc * 0, 1);
+
                 } else {
-                    scores.push_back(sc * 0. / (p1s.size() + p2s.size()));
-                    scores.push_back(sc * 0. / (p1s.size() + p2s.size()));
+
+                    addScore(i, sc * 0.0 / (p1s.size() + p2s.size()), 1);
+                    addScore(i + 1, sc * 0.0 / (p1s.size() + p2s.size()), 1);
                 }
-                //scores.push_back(ans.first->score() * 0 / (1.0 * normals));
-                //scores.push_back(ans.second->score() * 0 / (1.0 * normals));
             }
         }
-//tmpOutput[0].push_back(read->getReadMiniSAM(seq));
         delete read;
     }
-    cerr << "Not mapped " << notMapped << endl;
 
-//mergeTmpFiles(tmpFileNames, tmpOutput, solutionOut, threadNum_);
-    for (int i = 0; i < scores.size(); ++i) {
-        miniSc = min(miniSc, scores[i]);
-        maxiSc = max(maxiSc, scores[i]);
+    for (auto&& vec : buckets) {
+        sort(vec.begin(), vec.end());
     }
-    cerr << "Scores" << miniSc << "; " << maxiSc << endl;
+
+    vector<double> scores(N, 0);
+    int cntr = 0;
+    double prevScore = -1;
+    bool firstPass = true;
+    int b = 0;
+    for (auto&& bucket : buckets) {
+        if(bucket.empty()) continue;
+        int i = 0;
+        if(firstPass || prevScore != 0) {
+            prevScore = bucket[0].score;
+            scores[bucket[0].id] = cntr;
+            cntr++;
+            i = 1;
+            firstPass = false;
+        }
+
+        for (; i < bucket.size(); ++i) {
+            //cerr << "bckt " << b <<  ";  score" << bucket[i].score << endl;
+            if(abs(bucket[i].score - prevScore) < 1e-6) {
+                scores[bucket[i].id] = cntr;
+            } else {
+                cntr++;
+                scores[bucket[i].id] = cntr;
+                prevScore = bucket[i].score;
+            }
+        }
+        ++b;
+    }
+
+    int totalDiffValues = cntr;
+    cerr << "Not mapped " << notMapped << endl;
+    cerr << "Diff lvls " << totalDiffValues << endl;
 
     char score_str[30];
     vector<string> out;
     for (int i = 0; i < tmpOutput.size(); ++i) {
-        double score = scores[i] / (1.00 * maxiSc);
-        //cerr << score << endl;
+        double score = 1 - (1.0 * scores[i]) / totalDiffValues;
         if(score > hawker::TRESH) {
             std::snprintf(score_str, sizeof score_str, "%.6f", score);
             out.push_back(tmpOutput[i] + string(score_str));
         }
 
-//fprintf(out_file, "%s\n", s.c_str());
     }
-
-//    fclose(out_file);
     return out;
 
 }
 
 #ifdef LOCAL_ONLY
 
+#ifdef ASSEMBLY
+string PATH = string("../");
+#else
 string PATH = string("/media/bio_disk/tc_dna1");
+#endif
+
 string TEST_NUM = to_string(5);
 
 /**
@@ -6688,7 +7026,7 @@ double compute_accuracy(vector<ReadResult>& read_results, double norm_a) {
     sort(read_results.begin(),
          read_results.end(),
          [](const ReadResult& lhs, const ReadResult& rhs) {return (lhs.confidence>rhs.confidence);});
-    // merge results of equal confidence
+// merge results of equal confidence
     vector<int> cumul_si { read_results[0].r };
     vector<int> pos { 0 };
     for (int i = 1; i < n; ++i) {
@@ -6702,7 +7040,7 @@ double compute_accuracy(vector<ReadResult>& read_results, double norm_a) {
         }
     }
     cout << "Lvls: " << pos.size() << "; cmsm_el " << cumul_si.size() << endl;
-    // compute the AuC
+// compute the AuC
     double auc = 0.0;
     double invn = 1.0 / (double) n;
     double invnp1 = 1.0 / (double) (n + 1);
@@ -6733,7 +7071,7 @@ double compute_accuracy(vector<ReadResult>& read_results, double norm_a) {
  * @return  alignments in format specified in the problem statement
  */
 vector<string> perform_test(int testDifficulty, double norm_a) {
-    // test data path and description
+// test data path and description
     string fa1_path, fa2_path;
     vector<int> chr_ids;
     if(testDifficulty == 0) {
@@ -6750,10 +7088,10 @@ vector<string> perform_test(int testDifficulty, double norm_a) {
         for (int i = 1; i <= 24; ++i)
             chr_ids.push_back(i);
     }
-    // call the MM DNASequencing methods
+// call the MM DNASequencing methods
     DNASequencing dna_sequencing;
     dna_sequencing.initTest(testDifficulty);
-    // load chromatid
+// load chromatid
     for (int chromatid_seq_id : chr_ids) {
         vector<string> chromatid_seq;
         string path = PATH + "/data/chromatid" + to_string(chromatid_seq_id)
@@ -6771,7 +7109,7 @@ vector<string> perform_test(int testDifficulty, double norm_a) {
         dna_sequencing.passReferenceGenome(chromatid_seq_id, chromatid_seq);
     }
     dna_sequencing.preProcessing();
-    // load reads
+// load reads
     vector<string> read_id, read_seq;
     {
         ifstream ifs1(fa1_path);
@@ -6791,7 +7129,7 @@ vector<string> perform_test(int testDifficulty, double norm_a) {
         }
     }
     int nreads = read_id.size();
-    // compute alignments
+// compute alignments
     vector<string> results = dna_sequencing.getAlignment(nreads, norm_a, 0.5,
                                                          read_id, read_seq);
     return results;
@@ -6813,15 +7151,15 @@ int test(const int testDifficulty) {
         minisam_path = PATH + "/data/large" + TEST_NUM + ".minisam";
         norm_a = NORM_A_LARGE;
     }
-    // load truth
+// load truth
     truth = parse_truth(minisam_path);
 
-    // perform test
+// perform test
     vector<string> results = perform_test(testDifficulty, norm_a);
     cout << "Broj rezultata:" << results.size() << endl;
 
     vector<ReadResult> read_results = build_read_results(truth, results);
-    // scoring
+// scoring
     double accuracy = compute_accuracy(read_results, norm_a);
     cout << "aa" << endl;
     return 0;
